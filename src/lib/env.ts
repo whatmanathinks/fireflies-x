@@ -11,6 +11,8 @@ export const env = {
   llmApiKey: process.env.LLM_API_KEY ?? "",
   llmBaseUrl: process.env.LLM_BASE_URL ?? "",
   llmModel: process.env.LLM_MODEL ?? "",
+  llmMaxTokens: Number(process.env.LLM_MAX_TOKENS ?? 3500),
+  llmReasoningEffort: process.env.LLM_REASONING_EFFORT ?? "low",
   blobToken: process.env.BLOB_READ_WRITE_TOKEN ?? "",
   internalSecret: process.env.INTERNAL_JOB_SECRET ?? "dev-internal-secret",
   publicBaseUrl:

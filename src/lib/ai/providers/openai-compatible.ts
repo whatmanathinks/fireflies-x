@@ -19,17 +19,69 @@ function joinParts(parts: ContentPart[]) {
   return parts.map((p) => p.text).join("\n\n");
 }
 
-async function post(body: Record<string, unknown>) {
-  const res = await fetch(endpoint(), {
-    method: "POST",
-    headers: headers(),
-    body: JSON.stringify(body),
-  });
-  if (!res.ok) {
+const MAX_RETRIES = 4;
+const MAX_WAIT_MS = 65_000;
+
+function retryDelayMs(res: Response, detail: string, attempt: number) {
+  const header = res.headers.get("retry-after");
+  if (header) {
+    const seconds = Number(header);
+    if (Number.isFinite(seconds)) return Math.min(MAX_WAIT_MS, seconds * 1000 + 500);
+  }
+  const hinted = detail.match(/try again in ([\d.]+)s/i);
+  if (hinted) return Math.min(MAX_WAIT_MS, Number(hinted[1]) * 1000 + 500);
+  return Math.min(MAX_WAIT_MS, 2 ** attempt * 1000);
+}
+
+function withReasoning(body: Record<string, unknown>) {
+  const effort = env.llmReasoningEffort;
+  if (!effort || effort === "off") return body;
+  return { ...body, reasoning_effort: effort };
+}
+
+async function post(body: Record<string, unknown>, allowReasoning = true) {
+  let payload = allowReasoning ? withReasoning(body) : body;
+
+  for (let attempt = 0; ; attempt++) {
+    const res = await fetch(endpoint(), {
+      method: "POST",
+      headers: headers(),
+      body: JSON.stringify(payload),
+    });
+
+    if (res.ok) return res;
+
     const detail = await res.text();
+
+    if (
+      res.status === 400 &&
+      "reasoning_effort" in payload &&
+      /reasoning_effort|unknown|unrecognized|not supported/i.test(detail)
+    ) {
+      payload = body;
+      continue;
+    }
+    if (res.status === 413 || /reduce your message size/i.test(detail)) {
+      throw new Error(
+        `This transcript is too large for ${env.llmModel} on your current tier. ` +
+          `Lower LLM_MAX_TOKENS (currently ${env.llmMaxTokens}), pick a model with a higher ` +
+          `tokens-per-minute limit, or use a shorter meeting.`,
+      );
+    }
+
+    const retryable = res.status === 429 || res.status >= 500;
+
+    if (retryable && attempt < MAX_RETRIES) {
+      const wait = retryDelayMs(res, detail, attempt);
+      console.warn(
+        `[llm] ${env.llmModel} ${res.status}; retrying in ${Math.round(wait / 1000)}s (attempt ${attempt + 1}/${MAX_RETRIES})`,
+      );
+      await new Promise((resolve) => setTimeout(resolve, wait));
+      continue;
+    }
+
     throw new Error(`${env.llmModel} request failed (${res.status}): ${detail.slice(0, 400)}`);
   }
-  return res;
 }
 
 export async function openAiJson(
@@ -46,7 +98,7 @@ export async function openAiJson(
     const res = await post({
       model: env.llmModel,
       messages,
-      max_tokens: 16000,
+      max_tokens: env.llmMaxTokens,
       temperature: 0.3,
       response_format: responseFormat,
     });
@@ -79,7 +131,7 @@ export async function* openAiStream(
   const res = await post({
     model: env.llmModel,
     stream: true,
-    max_tokens: 4000,
+    max_tokens: Math.min(env.llmMaxTokens, 2000),
     temperature: 0.4,
     messages: [
       { role: "system", content: system },

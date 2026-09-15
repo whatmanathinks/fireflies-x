@@ -1,5 +1,6 @@
-import { generateJson } from "./provider";
+import { env } from "@/lib/env";
 import { renderTranscript, type TranscriptLine } from "./client";
+import { generateJson, activeProvider } from "./provider";
 import { classifySchema, summarySchema, type ClassifyResult, type SummaryResult } from "./schemas";
 import { templateById } from "./templates";
 
@@ -24,6 +25,19 @@ Return only sentence indices that genuinely belong to each category. Precision m
 - dates: a specific date, deadline, month, or scheduled time. Not vague words like "soon" or "later".
 - positive / negative: only sentences carrying clear sentiment. Most sentences are neutral and should appear in neither list.`;
 
+function brevityGuidance() {
+  const constrained =
+    activeProvider() === "openai-compatible" && env.llmMaxTokens < 6000;
+  if (!constrained) return "";
+  return `\n\nOutput budget is tight. Keep within these limits without dropping specifics:
+- overview: 2 to 3 short paragraphs
+- shorthand_bullet: at most 8 entries
+- outline: 3 to 5 chapters, one-sentence summaries
+- bullet_gist: at most 4 entries
+- keywords: at most 8
+Specific numbers, names and dates still matter more than prose.`;
+}
+
 export async function generateSummary(
   lines: TranscriptLine[],
   templateId: string,
@@ -35,7 +49,7 @@ export async function generateSummary(
   return generateJson(
     summarySchema,
     "meeting_notes",
-    `${SUMMARY_SYSTEM}\n\nTemplate guidance:\n${template.guidance}`,
+    `${SUMMARY_SYSTEM}\n\nTemplate guidance:\n${template.guidance}${brevityGuidance()}`,
     [
       {
         text: `Meeting title: ${meetingTitle}\n\nTranscript (each line is [index] (mm:ss) Speaker: text):\n\n${transcript}`,
