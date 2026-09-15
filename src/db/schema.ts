@@ -68,9 +68,9 @@ export const users = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
   name: text("name"),
   email: text("email").notNull().unique(),
-  emailVerified: timestamp("email_verified", { mode: "date" }),
+  emailVerified: timestamp("email_verified", { mode: "date", withTimezone: true }),
   image: text("image"),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
 export const accounts = pgTable(
@@ -98,7 +98,7 @@ export const sessions = pgTable("sessions", {
   userId: uuid("user_id")
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
-  expires: timestamp("expires", { mode: "date" }).notNull(),
+  expires: timestamp("expires", { mode: "date", withTimezone: true }).notNull(),
 });
 
 export const verificationTokens = pgTable(
@@ -106,7 +106,7 @@ export const verificationTokens = pgTable(
   {
     identifier: text("identifier").notNull(),
     token: text("token").notNull(),
-    expires: timestamp("expires", { mode: "date" }).notNull(),
+    expires: timestamp("expires", { mode: "date", withTimezone: true }).notNull(),
   },
   (t) => [primaryKey({ columns: [t.identifier, t.token] })],
 );
@@ -126,7 +126,7 @@ export const workspaces = pgTable("workspaces", {
     .notNull()
     .default([]),
   autoJoinMode: text("auto_join_mode").notNull().default("owned"),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
 export const workspaceMembers = pgTable(
@@ -157,7 +157,7 @@ export const channels = pgTable(
     createdBy: uuid("created_by").references(() => users.id, {
       onDelete: "set null",
     }),
-    createdAt: timestamp("created_at").notNull().defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [uniqueIndex("channels_workspace_slug_idx").on(t.workspaceId, t.slug)],
 );
@@ -183,7 +183,7 @@ export const meetings = pgTable(
       .notNull()
       .references(() => workspaces.id, { onDelete: "cascade" }),
     title: text("title").notNull(),
-    date: timestamp("date").notNull().defaultNow(),
+    date: timestamp("date", { withTimezone: true }).notNull().defaultNow(),
     durationMs: integer("duration_ms").notNull().default(0),
     hostEmail: text("host_email").notNull(),
     organizerEmail: text("organizer_email").notNull(),
@@ -208,8 +208,8 @@ export const meetings = pgTable(
     sttRequestId: text("stt_request_id"),
     recallBotId: text("recall_bot_id"),
     failureReason: text("failure_reason"),
-    createdAt: timestamp("created_at").notNull().defaultNow(),
-    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
     index("meetings_workspace_date_idx").on(t.workspaceId, t.date),
@@ -317,7 +317,7 @@ export const summaries = pgTable(
     meetingType: text("meeting_type").notNull().default("general"),
     topicsDiscussed: text("topics_discussed").array().notNull().default([]),
     notes: text("notes").notNull().default(""),
-    generatedAt: timestamp("generated_at").notNull().defaultNow(),
+    generatedAt: timestamp("generated_at", { withTimezone: true }).notNull().defaultNow(),
   },
 );
 
@@ -347,7 +347,7 @@ export const meetingAnalytics = pgTable("meeting_analytics", {
   questionCount: integer("question_count").notNull().default(0),
   taskCount: integer("task_count").notNull().default(0),
   speakers: jsonb("speakers").$type<SpeakerAnalytics[]>().notNull().default([]),
-  computedAt: timestamp("computed_at").notNull().defaultNow(),
+  computedAt: timestamp("computed_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
 export const tasks = pgTable(
@@ -365,7 +365,7 @@ export const tasks = pgTable(
     dueDate: text("due_date"),
     sentenceIndex: integer("sentence_index"),
     status: taskStatus("status").notNull().default("open"),
-    createdAt: timestamp("created_at").notNull().defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index("tasks_workspace_status_idx").on(t.workspaceId, t.status)],
 );
@@ -384,7 +384,7 @@ export const bites = pgTable(
       onDelete: "set null",
     }),
     shareToken: text("share_token").notNull().unique(),
-    createdAt: timestamp("created_at").notNull().defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index("bites_meeting_idx").on(t.meetingId)],
 );
@@ -403,7 +403,7 @@ export const comments = pgTable(
     authorName: text("author_name").notNull(),
     body: text("body").notNull(),
     timeMs: integer("time_ms"),
-    createdAt: timestamp("created_at").notNull().defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index("comments_meeting_idx").on(t.meetingId)],
 );
@@ -420,7 +420,7 @@ export const bookmarks = pgTable(
       .references(() => users.id, { onDelete: "cascade" }),
     label: text("label").notNull(),
     timeMs: integer("time_ms").notNull(),
-    createdAt: timestamp("created_at").notNull().defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index("bookmarks_meeting_idx").on(t.meetingId)],
 );
@@ -438,7 +438,7 @@ export const askfredThreads = pgTable("askfred_threads", {
     onDelete: "cascade",
   }),
   title: text("title").notNull().default("New thread"),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
 export type Citation = { meetingId: string; timeMs: number; label: string };
@@ -453,7 +453,7 @@ export const askfredMessages = pgTable(
     role: text("role").notNull(),
     content: text("content").notNull(),
     citations: jsonb("citations").$type<Citation[]>().notNull().default([]),
-    createdAt: timestamp("created_at").notNull().defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index("askfred_messages_thread_idx").on(t.threadId)],
 );
@@ -466,8 +466,8 @@ export const shares = pgTable("shares", {
   createdBy: uuid("created_by").references(() => users.id, {
     onDelete: "set null",
   }),
-  expiresAt: timestamp("expires_at"),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
 export const jobs = pgTable(
@@ -482,10 +482,10 @@ export const jobs = pgTable(
     attempts: integer("attempts").notNull().default(0),
     lastError: text("last_error"),
     payload: jsonb("payload").$type<Record<string, unknown>>(),
-    runAfter: timestamp("run_after").notNull().defaultNow(),
-    startedAt: timestamp("started_at"),
-    finishedAt: timestamp("finished_at"),
-    createdAt: timestamp("created_at").notNull().defaultNow(),
+    runAfter: timestamp("run_after", { withTimezone: true }).notNull().defaultNow(),
+    startedAt: timestamp("started_at", { withTimezone: true }),
+    finishedAt: timestamp("finished_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
     uniqueIndex("jobs_meeting_step_idx").on(t.meetingId, t.step),

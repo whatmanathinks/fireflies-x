@@ -87,7 +87,7 @@ export async function runDueJobs(limit = 3) {
       await db
         .update(jobs)
         .set({ status: "completed", finishedAt: new Date(), lastError: null })
-        .where(eq(jobs.id, job.id));
+        .where(and(eq(jobs.id, job.id), eq(jobs.status, "running")));
       results.push({ step: job.step, meetingId: job.meetingId, ok: true });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -100,7 +100,7 @@ export async function runDueJobs(limit = 3) {
           finishedAt: exhausted ? new Date() : null,
           runAfter: new Date(Date.now() + 15_000 * job.attempts),
         })
-        .where(eq(jobs.id, job.id));
+        .where(and(eq(jobs.id, job.id), eq(jobs.status, "running")));
       if (exhausted) {
         await db
           .update(meetings)

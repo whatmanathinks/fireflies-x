@@ -6,10 +6,11 @@ import { enqueue } from "@/lib/jobs";
 import { applyScriptedTranscript } from "@/lib/stt/pipeline";
 import {
   audioDownloadUrl,
+  everRecorded,
   getBot,
   latestStatus,
   mapBotState,
-  TERMINAL_CODES,
+  wasAdmitted,
 } from "@/lib/bot/recall";
 
 const SEQUENCE = [
@@ -33,6 +34,19 @@ export async function advanceBot(meetingId: string) {
   return advanceSimulation(meetingId, meeting.botState);
 }
 
+async function failMeeting(meetingId: string, reason: string) {
+  await db
+    .update(meetings)
+    .set({
+      botState: "failed",
+      isLive: false,
+      status: "failed",
+      failureReason: reason,
+      updatedAt: new Date(),
+    })
+    .where(eq(meetings.id, meetingId));
+}
+
 async function pollRecallBot(meetingId: string, botId: string, createdAt: Date) {
   const bot = await getBot(botId);
   const status = latestStatus(bot);
@@ -40,29 +54,43 @@ async function pollRecallBot(meetingId: string, botId: string, createdAt: Date) 
   const nextState = mapBotState(code) as typeof meetings.$inferInsert.botState;
 
   if (code === "fatal" || code === "recording_permission_denied") {
-    await db
-      .update(meetings)
-      .set({
-        botState: "failed",
-        isLive: false,
-        status: "failed",
-        failureReason:
-          status?.message ??
-          (code === "recording_permission_denied"
-            ? "The host denied the notetaker permission to record."
-            : "The notetaker could not join this call."),
-        updatedAt: new Date(),
-      })
-      .where(eq(meetings.id, meetingId));
+    await failMeeting(
+      meetingId,
+      status?.message ??
+        (code === "recording_permission_denied"
+          ? "The host denied the notetaker permission to record."
+          : "The notetaker could not join this call."),
+    );
     return;
   }
 
-  if (code === "done") {
+  if (code === "done" || code === "call_ended") {
     const audioUrl = audioDownloadUrl(bot);
+
+    if (!audioUrl && code === "done" && !everRecorded(bot)) {
+      await failMeeting(
+        meetingId,
+        wasAdmitted(bot)
+          ? "The notetaker joined but never started recording, so there is nothing to transcribe."
+          : "The notetaker was never admitted to the call. Let it in from the waiting room next time.",
+      );
+      return;
+    }
+
     if (!audioUrl) {
+      const waitedMs = Date.now() - createdAt.getTime();
+      if (code === "done" && waitedMs > MAX_POLL_MS) {
+        await failMeeting(meetingId, "Timed out waiting for the recording to be processed.");
+        return;
+      }
       await db
         .update(meetings)
-        .set({ botState: "processing", isLive: false, updatedAt: new Date() })
+        .set({
+          botState: code === "done" ? "processing" : "leaving",
+          isLive: false,
+          status: "transcribing",
+          updatedAt: new Date(),
+        })
         .where(eq(meetings.id, meetingId));
       await enqueue(meetingId, "bot", {}, POLL_INTERVAL_MS);
       return;

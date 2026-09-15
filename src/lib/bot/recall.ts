@@ -105,3 +105,15 @@ export function mapBotState(code: string | undefined) {
 }
 
 export const TERMINAL_CODES = new Set(["done", "fatal", "recording_permission_denied"]);
+
+export function everRecorded(bot: RecallBot) {
+  return (bot.status_changes ?? []).some((s) =>
+    s.code.replace(/^bot\./, "") === "in_call_recording",
+  );
+}
+
+export function wasAdmitted(bot: RecallBot) {
+  return (bot.status_changes ?? []).some((s) =>
+    ["in_call_recording", "in_call_not_recording"].includes(s.code.replace(/^bot\./, "")),
+  );
+}
