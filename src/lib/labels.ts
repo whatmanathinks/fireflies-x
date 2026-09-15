@@ -1,7 +1,7 @@
 export const BOT_STATE_LABEL: Record<string, string> = {
   idle: "Queued",
   joining: "Joining the call…",
-  waiting_for_host: "Waiting to be admitted…",
+  waiting_for_host: "Waiting to be admitted to the call…",
   in_call: "In the call, recording",
   leaving: "Leaving the call…",
   processing: "Processing recording…",

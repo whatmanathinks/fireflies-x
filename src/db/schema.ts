@@ -206,6 +206,7 @@ export const meetings = pgTable(
     botState: botState("bot_state").notNull().default("idle"),
     language: text("language").notNull().default("en"),
     sttRequestId: text("stt_request_id"),
+    recallBotId: text("recall_bot_id"),
     failureReason: text("failure_reason"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),

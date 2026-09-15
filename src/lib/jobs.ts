@@ -14,7 +14,7 @@ import { classifySentences, generateSummary, toAiFilters } from "@/lib/ai/summar
 import { computeAnalytics } from "@/lib/analytics";
 import { hasAnthropic } from "@/lib/env";
 
-export type JobStep = "summarize" | "transcribe" | "bot_sim";
+export type JobStep = "summarize" | "transcribe" | "bot";
 
 const MAX_ATTEMPTS = 3;
 const STALE_MS = 5 * 60 * 1000;
@@ -120,9 +120,9 @@ async function runStep(
   payload: Record<string, unknown>,
 ) {
   if (step === "summarize") return summarizeMeeting(meetingId, payload);
-  if (step === "bot_sim") {
-    const { advanceBotSim } = await import("@/lib/bot-sim");
-    return advanceBotSim(meetingId);
+  if (step === "bot") {
+    const { advanceBot } = await import("@/lib/bot-sim");
+    return advanceBot(meetingId);
   }
   if (step === "transcribe") {
     const { runTranscription } = await import("@/lib/stt/pipeline");

@@ -5,6 +5,8 @@ import { db } from "@/db";
 import { meetingChannels, meetings, workspaces } from "@/db/schema";
 import { fail, handle } from "@/lib/api";
 import { requireSession } from "@/lib/auth";
+import { createBot } from "@/lib/bot/recall";
+import { hasRecall } from "@/lib/env";
 import { enqueue, runDueJobs } from "@/lib/jobs";
 
 const createSchema = z.object({
@@ -71,10 +73,31 @@ export async function POST(request: Request) {
     }
 
     if (input.source === "bot_sim") {
-      await enqueue(meeting.id, "bot_sim", {}, 500);
+      if (hasRecall() && input.meetingLink) {
+        try {
+          const bot = await createBot(
+            input.meetingLink,
+            workspace?.name ? `${workspace.name} Notetaker` : "Notetaker",
+            meeting.id,
+          );
+          await db
+            .update(meetings)
+            .set({ recallBotId: bot.id, botState: "joining", status: "recording" })
+            .where(eq(meetings.id, meeting.id));
+        } catch (error) {
+          const message = error instanceof Error ? error.message : "Could not dispatch notetaker";
+          await db
+            .update(meetings)
+            .set({ botState: "failed", status: "failed", failureReason: message.slice(0, 500) })
+            .where(eq(meetings.id, meeting.id));
+          throw new Error(message);
+        }
+      }
+
+      await enqueue(meeting.id, "bot", {}, 1500);
       after(() => runDueJobs(4));
     }
 
-    return { id: meeting.id, status: meeting.status };
+    return { id: meeting.id, status: meeting.status, simulated: !hasRecall() };
   });
 }

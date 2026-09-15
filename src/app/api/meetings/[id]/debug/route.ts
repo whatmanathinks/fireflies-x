@@ -23,6 +23,8 @@ export async function GET(
 
     return {
       status: meeting.status,
+      botState: meeting.botState,
+      recallBotId: meeting.recallBotId,
       failureReason: meeting.failureReason,
       durationMs: meeting.durationMs,
       sentences: rows.length,

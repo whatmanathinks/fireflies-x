@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/primitives";
 import type { Chapter } from "@/db/schema";
+import { BOT_STATE_LABEL } from "@/lib/labels";
 import { AnalyticsTab, type AnalyticsData } from "./analytics-tab";
 import { AskFredPanel } from "./askfred-panel";
 import { NotepadHeader, type MeetingHeaderData } from "./header";
@@ -38,6 +39,7 @@ export function Notepad({
   bites,
   comments,
   bookmarks,
+  provider,
 }: {
   meeting: MeetingHeaderData;
   sentences: TranscriptSentence[];
@@ -47,6 +49,7 @@ export function Notepad({
   bites: BiteRow[];
   comments: CommentRow[];
   bookmarks: BookmarkRow[];
+  provider: string;
 }) {
   const router = useRouter();
   const params = useSearchParams();
@@ -144,6 +147,7 @@ export function Notepad({
                   meetingId={meeting.id}
                   summary={summary}
                   status={meeting.status}
+                  provider={provider}
                   onSeekSentence={(index) => {
                     if (index === null) return;
                     const ms = indexToMs.get(index);
@@ -199,7 +203,7 @@ function TranscriptPending({ status, botState }: { status: string; botState: str
     status === "failed"
       ? "Transcription failed"
       : botState !== "idle" && botState !== "done"
-        ? "The notetaker is on the call…"
+        ? BOT_STATE_LABEL[botState] ?? "Notetaker running…"
         : status === "transcribing"
           ? "Transcribing audio…"
           : status === "recording"

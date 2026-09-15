@@ -14,6 +14,8 @@ export const env = {
   llmMaxTokens: Number(process.env.LLM_MAX_TOKENS ?? 3500),
   llmReasoningEffort: process.env.LLM_REASONING_EFFORT ?? "low",
   blobToken: process.env.BLOB_READ_WRITE_TOKEN ?? "",
+  recallApiKey: process.env.RECALL_API_KEY ?? "",
+  recallRegion: process.env.RECALL_REGION ?? "us-west-2",
   internalSecret: process.env.INTERNAL_JOB_SECRET ?? "dev-internal-secret",
   publicBaseUrl:
     process.env.PUBLIC_BASE_URL ??
@@ -28,6 +30,7 @@ export const hasAnthropic = () =>
   !env.forceDemo && (!!env.anthropicApiKey || (!!env.llmApiKey && !!env.llmBaseUrl));
 export const hasBlob = () => !!env.blobToken;
 export const hasGoogle = () => !!env.googleClientId && !!env.googleClientSecret;
+export const hasRecall = () => !!env.recallApiKey && !env.forceDemo;
 
 export const isLocalHost = () =>
   env.publicBaseUrl.includes("localhost") ||

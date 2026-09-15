@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { Notepad } from "@/components/notepad/notepad";
+import { providerLabel } from "@/lib/ai/provider";
 import { requireSession } from "@/lib/auth";
 import { getMeeting, getMeetingBundle } from "@/lib/queries";
 
@@ -20,6 +21,7 @@ export default async function MeetingPage({
   return (
     <Suspense>
       <Notepad
+        provider={providerLabel()}
         meeting={{
           id: meeting.id,
           title: meeting.title,

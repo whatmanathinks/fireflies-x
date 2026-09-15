@@ -1,7 +1,7 @@
 "use client";
 
 import { Bot, Info, Loader2, Video } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/misc";
@@ -25,6 +25,15 @@ export function AddToLiveDialog({
   const [link, setLink] = useState("");
   const [title, setTitle] = useState("");
   const [busy, setBusy] = useState(false);
+  const [real, setReal] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    if (!open || real !== null) return;
+    fetch("/api/capabilities")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => setReal(d?.realNotetaker ?? false))
+      .catch(() => setReal(false));
+  }, [open, real]);
 
   const valid = /^https?:\/\/.+/.test(link.trim());
 
@@ -68,18 +77,31 @@ export function AddToLiveDialog({
         </DialogHeader>
 
         <div className="space-y-4 p-5">
-          <div className="flex gap-2.5 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5">
-            <Info className="mt-px size-4 shrink-0 text-amber-600" />
-            <div className="text-[12px] leading-relaxed text-amber-900">
-              <b>This path is simulated.</b> A real notetaker bot needs headless browsers that
-              join and negotiate WebRTC with each platform — out of scope here. The bot state
-              machine, timings and downstream pipeline are real; the audio is a sample recording.
-              <br />
-              <span className="mt-1 inline-block">
-                For genuine capture of a real call, use <b>Record now</b> and share the call tab.
-              </span>
+          {real === false && (
+            <div className="flex gap-2.5 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5">
+              <Info className="mt-px size-4 shrink-0 text-amber-600" />
+              <div className="text-[12px] leading-relaxed text-amber-900">
+                <b>Running in simulation.</b> Set <code>RECALL_API_KEY</code> to send a real bot
+                into the call. Without it the state machine and pipeline still run end to end, but
+                the audio is a sample recording.
+                <br />
+                <span className="mt-1 inline-block">
+                  For genuine capture right now, use <b>Record now</b> and share the call tab.
+                </span>
+              </div>
             </div>
-          </div>
+          )}
+
+          {real === true && (
+            <div className="flex gap-2.5 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2.5">
+              <Bot className="mt-px size-4 shrink-0 text-emerald-600" />
+              <div className="text-[12px] leading-relaxed text-emerald-900">
+                <b>A real bot will join this call.</b> It appears as a participant, so someone may
+                need to admit it from the waiting room. Recording starts once a participant joins,
+                and the transcript is produced when the call ends.
+              </div>
+            </div>
+          )}
 
           <div>
             <label className="mb-1.5 block text-[12.5px] font-medium text-ink-700">
@@ -110,7 +132,7 @@ export function AddToLiveDialog({
             </Button>
             <Button variant="primary" disabled={!valid || busy} onClick={submit}>
               {busy ? <Loader2 className="animate-spin" /> : <Video />}
-              {busy ? "Dispatching…" : "Send notetaker"}
+              {busy ? "Dispatching…" : real ? "Send notetaker" : "Run simulation"}
             </Button>
           </div>
         </div>

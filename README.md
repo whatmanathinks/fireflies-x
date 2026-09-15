@@ -152,6 +152,7 @@ Only two variables are required. Everything else unlocks a capability and degrad
 | `DEEPGRAM_API_KEY` | Transcripts come from a bundled script instead of your audio |
 | `ANTHROPIC_API_KEY` *or* `LLM_API_KEY`+`LLM_BASE_URL`+`LLM_MODEL` | Notes fall back to a keyword summarizer |
 | `BLOB_READ_WRITE_TOKEN` | Media is stored on local disk under `.data/media` |
+| `RECALL_API_KEY` / `RECALL_REGION` | "Add to live meeting" runs the simulated bot instead of a real one |
 | `AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET` | Demo login only |
 | `PUBLIC_BASE_URL` | Defaults to localhost → synchronous transcription |
 | `INTERNAL_JOB_SECRET` | Guards `/api/jobs/run` and `/api/cron/sweep` |
@@ -220,19 +221,27 @@ Render or Fly from the same codebase.
 | Talk time, WPM, filler words, monologues, sentiment | **Real**, computed from word timings |
 | Full-text search across transcripts | **Real** Postgres FTS with a GIN index |
 | Public share links, soundbites, comments, bookmarks, exports | **Real** |
-| **Notetaker bot joining a Zoom/Meet/Teams call** | **Simulated** — see below |
+| **Notetaker bot joining a Zoom/Meet/Teams call** | **Real** via Recall.ai, or simulated without a key |
 
-### Why the bot is simulated
+### The notetaker bot
 
-A real notetaker bot runs a headless browser per call that joins the meeting, negotiates WebRTC
-with each platform, survives their UI changes, and handles waiting rooms and admission. That's a
-multi-week infrastructure project and an entire company's product (Recall.ai). The challenge brief
-explicitly allows a placeholder here.
+Set `RECALL_API_KEY` and a **real bot joins the call** — it appears as a participant, waits for
+admission, records, and hands back an MP3 that feeds the same Deepgram pipeline as everything
+else. [Recall.ai](https://www.recall.ai/pricing) is $0.50/hr with the first 5 hours free.
 
-What *is* real in that path: the state machine (`joining → waiting_for_host → in_call → leaving →
-processing`), its timings, the live UI updates, and the entire downstream pipeline. Only the audio
-is substituted. The dialog says so plainly, and points you at **Record now**, which captures a
-genuine Google Meet call by sharing the call's tab audio.
+Building this from scratch is not a weekend job: there is no join-a-meeting API, so you drive
+headless Chrome per call, terminate WebRTC to get clean audio, reimplement it per platform, and
+keep up with Google's UI changes forever — at ~2GB RAM per concurrent call. Buying it is the
+right call; the integration below is ~200 lines.
+
+Without the key the same flow runs as a **simulation** — the state machine, timings, live UI
+updates and downstream pipeline are all real, only the audio is a sample. The dialog states which
+mode it is in.
+
+**Progress is driven by polling, not webhooks**, so it works locally with no tunnel: the `bot` job
+re-enqueues itself every 5s until the call ends. A dev job runner (`src/instrumentation.ts`) ticks
+the queue every 3s in development; production uses the cron sweeper, and `/api/webhooks/recall`
+is available to drive transitions instantly if you point the Recall dashboard at it.
 
 ---
 
@@ -247,6 +256,7 @@ genuine Google Meet call by sharing the call's tab audio.
 | [Anthropic Claude](https://anthropic.com) | Notes, sentence classification, AskFred |
 | [wavesurfer.js](https://wavesurfer.xyz) | Waveform + playback |
 | [Radix UI](https://radix-ui.com) · [Tailwind v4](https://tailwindcss.com) · [lucide](https://lucide.dev) · [cmdk](https://cmdk.paco.me) · [sonner](https://sonner.emilkowal.ski) | UI primitives |
+| [Recall.ai](https://recall.ai) | Real notetaker bots for Meet / Zoom / Teams |
 | [Vercel Blob](https://vercel.com/docs/vercel-blob) | Media storage |
 | [Playwright](https://playwright.dev) | End-to-end test scripts |
 

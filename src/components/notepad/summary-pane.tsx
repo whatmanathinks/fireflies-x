@@ -47,11 +47,13 @@ export function SummaryPane({
   meetingId,
   summary,
   status,
+  provider,
   onSeekSentence,
 }: {
   meetingId: string;
   summary: SummaryData | null;
   status: string;
+  provider: string;
   onSeekSentence: (index: number | null) => void;
 }) {
   const { seek } = usePlayback();
@@ -90,7 +92,8 @@ export function SummaryPane({
             <Loader2 className="size-5 animate-spin text-brand-500" />
             <p className="text-[14px] font-semibold text-ink-800">Writing your notes…</p>
             <p className="max-w-xs text-[12.5px] leading-relaxed text-ink-500">
-              Claude is reading the transcript to produce an overview, chapters and action items.
+              {provider} is reading the transcript to produce an overview, chapters and action
+              items.
             </p>
           </>
         )}
