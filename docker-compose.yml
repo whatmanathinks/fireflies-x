@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: fireflies-clone-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: fireflies
+      POSTGRES_PASSWORD: fireflies
+      POSTGRES_DB: fireflies
+    ports:
+      - "5433:5432"
+    volumes:
+      - fireflies-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fireflies"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  fireflies-pgdata:
