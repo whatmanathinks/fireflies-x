@@ -37,8 +37,8 @@ export default async function LoginPage() {
           </div>
 
           <p className="mt-6 text-[12px] leading-relaxed text-ink-400">
-            The demo account is pre-loaded with three fully transcribed meetings so you can
-            explore every screen immediately.
+            The demo gives you your own private workspace, pre-loaded with three fully
+            transcribed meetings. Record, edit and delete freely — nobody else sees it.
           </p>
         </div>
       </div>

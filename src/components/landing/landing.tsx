@@ -166,7 +166,7 @@ export function Landing({ signedIn }: { signedIn: boolean }) {
             </div>
 
             <p className="mt-3.5 text-[12.5px] text-white/40">
-              No signup. The demo account is loaded with real transcribed meetings.
+              No signup. You get your own private workspace, preloaded with transcribed meetings.
             </p>
 
             <div className="mx-auto mt-6 inline-flex items-center gap-2 rounded-full border border-emerald-400/25 bg-emerald-400/[0.07] px-3.5 py-1.5">

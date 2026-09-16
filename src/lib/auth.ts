@@ -1,12 +1,11 @@
 import { DrizzleAdapter } from "@auth/drizzle-adapter";
-import { eq } from "drizzle-orm";
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
 import type { Provider } from "next-auth/providers";
 import { db } from "@/db";
 import { accounts, sessions, users, verificationTokens } from "@/db/schema";
-import { DEMO_EMAIL, DEMO_NAME } from "@/lib/constants";
+import { createDemoSandbox } from "@/lib/demo";
 import { env, hasGoogle } from "@/lib/env";
 import { ensureWorkspace } from "@/lib/workspace";
 
@@ -28,15 +27,8 @@ providers.push(
     name: "Demo",
     credentials: {},
     async authorize() {
-      const existing = await db.query.users.findFirst({
-        where: eq(users.email, DEMO_EMAIL),
-      });
-      if (existing) return { id: existing.id, email: existing.email, name: existing.name, image: existing.image };
-      const [created] = await db
-        .insert(users)
-        .values({ email: DEMO_EMAIL, name: DEMO_NAME })
-        .returning();
-      return { id: created.id, email: created.email, name: created.name, image: created.image };
+      const user = await createDemoSandbox();
+      return { id: user.id, email: user.email, name: user.name, image: user.image };
     },
   }),
 );

@@ -29,6 +29,7 @@ export async function handle<T>(fn: () => Promise<T>) {
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     if (message === "UNAUTHENTICATED") return unauthorized();
+    if (/not found$/i.test(message)) return fail(message, 404);
     console.error("[api]", message);
     return fail(message, 500);
   }

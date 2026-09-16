@@ -16,11 +16,10 @@ import {
 import { heuristicClassify, heuristicSummary } from "@/lib/ai/fallback";
 import { classifySentences, generateSummary, toAiFilters } from "@/lib/ai/summarize";
 import { computeAnalytics } from "@/lib/analytics";
-import { DEMO_EMAIL, DEMO_NAME, DEMO_WORKSPACE } from "@/lib/constants";
+import { DEMO_NAME, DEMO_WORKSPACE, TEMPLATE_EMAIL } from "@/lib/constants";
 import { hasAnthropic } from "@/lib/env";
 import { buildSentences, fixtureDuration } from "@/lib/fixtures/build";
 import { fixtures, type Fixture } from "@/lib/fixtures/transcripts";
-import { token } from "@/lib/utils";
 
 const USE_AI = process.env.SEED_WITH_AI === "1" && hasAnthropic();
 
@@ -157,9 +156,9 @@ async function seedMeeting(
 async function main() {
   console.log(`Seeding (${USE_AI ? "real Claude" : "heuristic"} notes)...`);
 
-  let user = await db.query.users.findFirst({ where: eq(users.email, DEMO_EMAIL) });
+  let user = await db.query.users.findFirst({ where: eq(users.email, TEMPLATE_EMAIL) });
   if (!user) {
-    [user] = await db.insert(users).values({ email: DEMO_EMAIL, name: DEMO_NAME }).returning();
+    [user] = await db.insert(users).values({ email: TEMPLATE_EMAIL, name: DEMO_NAME }).returning();
   }
 
   let workspace = await db.query.workspaces.findFirst({
@@ -223,8 +222,7 @@ async function main() {
     console.log(`  ✓ ${m.title}`);
   }
 
-  console.log(`\nDone. Sign in with the Demo button (${DEMO_EMAIL}).`);
-  console.log(`Share token sample: ${token(12)}`);
+  console.log("\nDone. Template workspace ready — each demo visitor gets a private copy.");
   process.exit(0);
 }
 
