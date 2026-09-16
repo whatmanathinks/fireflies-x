@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { env } from "@/lib/env";
+import { hasPool, primaryLabel } from "./pool";
 
 export type ProviderId = "anthropic" | "openai-compatible" | "none";
 
@@ -13,19 +14,15 @@ export type ChatMessage = { role: "user" | "assistant"; content: string };
 export function activeProvider(): ProviderId {
   if (env.forceDemo) return "none";
   if (env.anthropicApiKey) return "anthropic";
-  if (env.llmApiKey && env.llmBaseUrl) return "openai-compatible";
+  if (hasPool()) return "openai-compatible";
   return "none";
 }
 
 export function providerLabel() {
   const provider = activeProvider();
   if (provider === "anthropic") return `Anthropic ${env.anthropicModel}`;
-  if (provider === "openai-compatible") return env.llmModel;
+  if (provider === "openai-compatible") return primaryLabel();
   return "Scripted (no LLM key)";
-}
-
-export function modelCandidates() {
-  return [env.llmModel, ...env.llmFallbackModels].filter(Boolean);
 }
 
 export function hasLlm() {

@@ -218,8 +218,14 @@ LLM_MODEL=llama3.1:8b
 LLM_API_KEY=ollama
 ```
 
-`ANTHROPIC_API_KEY` wins when both are set. Structured output uses `json_schema` and falls back to
-`json_object` + schema-in-prompt for models that don't support it.
+`ANTHROPIC_API_KEY` wins when both are set.
+
+**Pooling several free keys.** Free tiers cap tokens per minute *and* per day, so one key runs out
+on a long meeting. `LLM_POOL` takes a list of endpoints, each with its own key and models. Tier 0
+entries are load-balanced - consecutive calls start on a different key, spreading load rather than
+draining one - and higher tiers are fallbacks used only once every tier-0 option is rate limited or
+out of daily quota. Rotation is automatic on rate limits, per-request output ceilings, daily quota
+exhaustion, and models that fail to produce schema-valid JSON.
 
 ---
 

@@ -18,6 +18,7 @@ export const env = {
     .split(",")
     .map((m) => m.trim())
     .filter(Boolean),
+  llmPoolRaw: process.env.LLM_POOL ?? "",
   blobToken: process.env.BLOB_READ_WRITE_TOKEN ?? "",
   blobStoreId: process.env.BLOB_STORE_ID ?? "",
   recallApiKey: process.env.RECALL_API_KEY ?? "",
