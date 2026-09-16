@@ -106,7 +106,7 @@ export function ShareDialog({
                 </Button>
               </div>
               <div className="flex items-center justify-between">
-                <p className="text-[12px] text-ink-500">
+                <p className="text-[12px] text-ink-500" suppressHydrationWarning>
                   {expiresAt
                     ? `Expires ${new Date(expiresAt).toLocaleDateString()}`
                     : "Never expires"}

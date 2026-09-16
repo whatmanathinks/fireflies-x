@@ -47,6 +47,7 @@ import {
   Tooltip,
 } from "@/components/ui/primitives";
 import { STATUS_LABEL } from "@/lib/labels";
+import { useHydrated } from "@/lib/use-hydrated";
 import { cn, formatDuration } from "@/lib/utils";
 
 export type MeetingRow = {
@@ -119,6 +120,7 @@ export function Notebook({
   const [newChannel, setNewChannel] = useState("");
   const [creating, setCreating] = useState(false);
   const [now] = useState(() => Date.now());
+  const hydrated = useHydrated();
 
   const allParticipants = useMemo(
     () => [...new Set(meetings.flatMap((m) => m.participants))].sort(),
@@ -158,11 +160,12 @@ export function Notebook({
         weekday: "long",
         month: "long",
         day: "numeric",
+        ...(hydrated ? {} : { timeZone: "UTC" }),
       });
       groups.set(key, [...(groups.get(key) ?? []), m]);
     }
     return [...groups.entries()];
-  }, [filtered]);
+  }, [filtered, hydrated]);
 
   const activeFilterCount =
     (hostedByMe ? 1 : 0) + (source ? 1 : 0) + (minDuration ? 1 : 0) +
@@ -461,7 +464,7 @@ export function Notebook({
               {grouped.map(([day, rows]) => (
                 <section key={day}>
                   <div className="sticky top-0 z-10 border-b border-line bg-canvas/90 px-4 py-1.5 backdrop-blur">
-                    <SectionLabel>{day}</SectionLabel>
+                    <SectionLabel suppressHydrationWarning>{day}</SectionLabel>
                   </div>
                   {rows.map((m) => (
                     <MeetingListRow
@@ -596,7 +599,7 @@ function MeetingListRow({
         </div>
 
         <div className="mt-0.5 flex items-center gap-2 text-[11.5px] text-ink-400">
-          <span>
+          <span suppressHydrationWarning>
             {new Date(meeting.date).toLocaleTimeString(undefined, {
               hour: "numeric",
               minute: "2-digit",

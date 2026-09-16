@@ -141,7 +141,7 @@ export function NotepadHeader({ meeting }: { meeting: MeetingHeaderData }) {
 
         <div className="mt-0.5 flex flex-wrap items-center gap-x-2.5 gap-y-1 px-1 text-[12px] text-ink-500">
           <SourceIcon className="size-3.5 text-ink-400" />
-          <span>
+          <span suppressHydrationWarning>
             {new Date(meeting.date).toLocaleString(undefined, {
               weekday: "short",
               month: "short",

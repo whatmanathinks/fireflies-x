@@ -126,7 +126,7 @@ export function TasksBoard({ tasks }: { tasks: TaskRow[] }) {
               <section key={meetingId}>
                 <div className="mb-2 flex items-center gap-2">
                   <SectionLabel className="truncate">{items[0].meetingTitle}</SectionLabel>
-                  <span className="text-[11px] text-ink-400">
+                  <span className="text-[11px] text-ink-400" suppressHydrationWarning>
                     {new Date(items[0].meetingDate).toLocaleDateString(undefined, {
                       month: "short",
                       day: "numeric",

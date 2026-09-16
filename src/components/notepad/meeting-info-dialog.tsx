@@ -36,7 +36,7 @@ export function MeetingInfoDialog({
         <div className="scrollbar-thin max-h-[26rem] space-y-5 overflow-y-auto p-5">
           <dl className="grid grid-cols-[6rem_1fr] gap-x-3 gap-y-2 text-[12.5px]">
             <dt className="text-ink-400">Date</dt>
-            <dd className="text-ink-800">
+            <dd className="text-ink-800" suppressHydrationWarning>
               {new Date(meeting.date).toLocaleString(undefined, {
                 dateStyle: "full",
                 timeStyle: "short",

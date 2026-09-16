@@ -267,7 +267,7 @@ export function SummaryPane({
           </Section>
         )}
 
-        <p className="pt-1 text-[11px] text-ink-400">
+        <p className="pt-1 text-[11px] text-ink-400" suppressHydrationWarning>
           Generated {new Date(summary.generatedAt).toLocaleString()} · {summary.meetingType}
         </p>
       </div>

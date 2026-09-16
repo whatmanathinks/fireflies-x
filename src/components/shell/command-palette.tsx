@@ -102,7 +102,7 @@ export function CommandPalette({
                   >
                     <CalendarDays className="size-3.5 shrink-0 text-ink-400" />
                     <span className="flex-1 truncate text-ink-800">{m.title}</span>
-                    <span className="shrink-0 text-[11.5px] text-ink-400">
+                    <span className="shrink-0 text-[11.5px] text-ink-400" suppressHydrationWarning>
                       {new Date(m.date).toLocaleDateString(undefined, {
                         month: "short",
                         day: "numeric",
