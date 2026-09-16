@@ -3,17 +3,33 @@
   "crons": [
     {
       "path": "/api/cron/sweep",
-      "schedule": "*/2 * * * *"
+      "schedule": "0 4 * * *"
     }
   ],
   "functions": {
-    "src/app/api/jobs/run/route.ts": { "maxDuration": 300 },
-    "src/app/api/cron/sweep/route.ts": { "maxDuration": 300 },
-    "src/app/api/webhooks/deepgram/route.ts": { "maxDuration": 300 },
-    "src/app/api/meetings/[id]/finalize/route.ts": { "maxDuration": 300 },
-    "src/app/api/meetings/[id]/regenerate/route.ts": { "maxDuration": 300 },
-    "src/app/api/meetings/[id]/askfred/route.ts": { "maxDuration": 300 },
-    "src/app/api/askfred/route.ts": { "maxDuration": 300 },
-    "src/app/api/uploads/direct/route.ts": { "maxDuration": 300 }
+    "src/app/api/jobs/run/route.ts": {
+      "maxDuration": 300
+    },
+    "src/app/api/cron/sweep/route.ts": {
+      "maxDuration": 300
+    },
+    "src/app/api/webhooks/deepgram/route.ts": {
+      "maxDuration": 300
+    },
+    "src/app/api/meetings/[id]/finalize/route.ts": {
+      "maxDuration": 300
+    },
+    "src/app/api/meetings/[id]/regenerate/route.ts": {
+      "maxDuration": 300
+    },
+    "src/app/api/meetings/[id]/askfred/route.ts": {
+      "maxDuration": 300
+    },
+    "src/app/api/askfred/route.ts": {
+      "maxDuration": 300
+    },
+    "src/app/api/uploads/direct/route.ts": {
+      "maxDuration": 300
+    }
   }
 }

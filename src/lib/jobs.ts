@@ -80,6 +80,21 @@ async function claimJobs(limit: number) {
     .returning();
 }
 
+export async function hasDueWork() {
+  const [row] = await db
+    .select({ id: jobs.id })
+    .from(jobs)
+    .where(
+      and(
+        lte(jobs.runAfter, new Date()),
+        eq(jobs.status, "queued"),
+        lt(jobs.attempts, MAX_ATTEMPTS),
+      ),
+    )
+    .limit(1);
+  return !!row;
+}
+
 export async function runDueJobs(limit = 3) {
   const results: { step: string; meetingId: string; ok: boolean; error?: string }[] = [];
 
