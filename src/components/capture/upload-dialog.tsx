@@ -38,6 +38,7 @@ export function UploadDialog({
   const [file, setFile] = useState<File | null>(null);
   const [title, setTitle] = useState("");
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [progress, setProgress] = useState(0);
   const [dragging, setDragging] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -46,12 +47,22 @@ export function UploadDialog({
     setFile(null);
     setTitle("");
     setBusy(false);
+    setError(null);
     setProgress(0);
     setDragging(false);
   }
 
   function pick(next: File | null | undefined) {
     if (!next) return;
+    setError(null);
+    if (next.size > 500 * 1024 * 1024) {
+      setError("That file is over the 500 MB limit.");
+      return;
+    }
+    if (next.type && !/^(audio|video)\//.test(next.type)) {
+      setError(`That looks like a ${next.type} file. Upload audio or video instead.`);
+      return;
+    }
     setFile(next);
     if (!title) setTitle(next.name.replace(/\.[^.]+$/, ""));
   }
@@ -105,7 +116,14 @@ export function UploadDialog({
       onOpenChange(false);
       reset();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Upload failed");
+      const raw = error instanceof Error ? error.message : "Upload failed";
+      const friendly = /403|forbidden|content type|not allowed/i.test(raw)
+        ? `That file type isn't supported (${file.type || "unknown type"}). Upload an audio or video file — MP3, WAV, M4A, WebM, MP4 or MOV.`
+        : /413|too large|size/i.test(raw)
+          ? "That file is over the 500 MB limit."
+          : raw;
+      setError(friendly);
+      toast.error(friendly);
       setBusy(false);
       setProgress(0);
     }
@@ -194,6 +212,12 @@ export function UploadDialog({
                 placeholder="Customer call"
               />
             </div>
+          )}
+
+          {error && (
+            <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[12.5px] leading-relaxed text-amber-900">
+              {error}
+            </p>
           )}
 
           {busy && (

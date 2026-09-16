@@ -26,6 +26,7 @@ export async function GET(
       botState: meeting.botState,
       recallBotId: meeting.recallBotId,
       failureReason: meeting.failureReason,
+      failureCode: meeting.failureCode,
       durationMs: meeting.durationMs,
       sentences: rows.length,
       jobs: jobRows.map((j) => ({ step: j.step, status: j.status, attempts: j.attempts, error: j.lastError })),
