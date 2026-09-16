@@ -480,6 +480,55 @@
       </p>
     </div>
 
+
+    <div class="finding fixed">
+      <span class="tag">Serverless limits · production only</span>
+      <p class="finding-h">Summarization outlived the function</p>
+      <p>
+        A 55-minute call left a job marked <code>running</code> for 874 seconds — impossible, because
+        Vercel kills functions at 300. The invocation died mid-merge and the stale reclaim would have
+        restarted it from zero, forever. Summarization is now incremental: each section is
+        checkpointed to the job row as it completes, and an invocation nearing its budget saves and
+        re-queues itself, so the next one resumes rather than repeats.
+      </p>
+    </div>
+
+    <div class="finding fixed">
+      <span class="tag">Scheduling</span>
+      <p class="finding-h">The notetaker joined, but the UI never moved</p>
+      <p>
+        Bot polling schedules itself a few seconds out. <code>after()</code> drains <em>due</em> work
+        immediately, so the not-yet-due poll was skipped and the chain stopped — progress only
+        resumed when an unrelated request happened to drain the queue. Invisible locally, where a dev
+        worker ticks every three seconds. The runner now waits for work becoming due shortly and
+        chains onward while any remains.
+      </p>
+    </div>
+
+    <div class="finding fixed">
+      <span class="tag">Provider limits</span>
+      <p class="finding-h">Three different limits wearing the same status code</p>
+      <p>
+        Groq returns <code>429</code> for per-minute tokens, for a per-request output ceiling
+        (&ldquo;Request too large&rdquo;, invisible in every response header), and for an exhausted
+        daily quota. Treating them alike produced infinite retries on requests that could never
+        succeed, and error messages naming the wrong cause. Each is now handled on its own terms:
+        rotate to another model, learn the ceiling and stay under it, or stop and say the quota
+        resets at midnight UTC.
+      </p>
+    </div>
+
+    <div class="finding fixed">
+      <span class="tag">Sizing</span>
+      <p class="finding-h">A request no model could answer</p>
+      <p>
+        Classification chunks were sized by input tokens alone, but the output grows with the
+        <em>number</em> of sentences — each can appear in up to seven index arrays. At 272 sentences
+        per call the answer exceeded every model&rsquo;s output ceiling, so rotating between them
+        just rediscovered the same impossibility. Chunks are now capped by sentence count as well.
+      </p>
+    </div>
+
     <h3>Also verified</h3>
     <ul>
       <li>A real two-speaker MP3 through the full upload → Deepgram → notes pipeline.</li>
@@ -497,6 +546,10 @@
       <li><strong>Live streaming is off</strong> on the current Deepgram key — it lacks the Member role needed to mint browser tokens. Recordings are transcribed in full when you stop; you just don't see words appear live. A correctly-scoped key enables it with no code change.</li>
       <li><strong>Demo sandboxes are per-browser.</strong> Without Google OAuth configured there's no identity to tie a visitor across devices, so a different device gets a fresh workspace. Setting <code>AUTH_GOOGLE_ID</code> gives real persistent accounts.</li>
       <li><strong>The free model is the weak link.</strong> <code>gpt-oss-120b</code> writes solid notes but is measurably less precise than Claude at citing the exact line — spot-checking AskFred, one citation landed on the right topic but the wrong sentence. Adding an Anthropic key switches provider with no code change.</li>
+      <li><strong>The free tier has a daily ceiling, not just a per-minute one.</strong> Groq allows
+        200,000 tokens per day per model. Repeatedly re-running a 55-minute transcript exhausts it,
+        after which every request fails until 00:00 UTC. The app now says so explicitly rather than
+        blaming the model. An Anthropic key removes the limit and skips chunking entirely.</li>
       <li><strong>Long meetings take minutes, not seconds</strong> on a free tier, because each chunk waits out the per-minute ceiling. Progress is shown; a paid tier collapses it to one or two calls.</li>
       <li><strong>Vercel Hobby crons run daily</strong>, so production bot-progress polling should be driven by the Recall webhook endpoint rather than the sweeper.</li>
       <li><strong>Diarization yields "Speaker 1 / 2 / 3."</strong> Mapping them to real people is a manual rename that applies across the transcript — the same as real Fireflies until voice profiles are trained.</li>
@@ -525,8 +578,10 @@ pnpm dev</pre>
     <p>
       The brief suggested under ten hours. This took roughly twenty elapsed, across two days, because the goal
       was a product rather than a demonstration — and most of the second half went on things only real usage
-      surfaces. The 55-minute analyst call was the single most valuable test: it broke the summarizer, and fixing
-      it properly meant measuring the prompt rather than guessing at the cause.
+      surfaces. The 55-minute analyst call was the single most valuable test: it broke the summarizer four
+      separate times, each with a different cause, and none of them were guessable from the symptom. Every fix
+      came from reading the actual error — measuring the prompt, checking the rate-limit headers, reproducing the
+      failing chunk against the provider directly — rather than pattern-matching on the previous failure.
     </p>
     <p>
       Built with Claude Code. Where the brief allowed a placeholder — the meeting bot — I initially simulated it,
