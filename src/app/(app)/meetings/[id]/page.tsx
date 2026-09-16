@@ -22,6 +22,7 @@ export default async function MeetingPage({
     <Suspense>
       <Notepad
         provider={providerLabel()}
+        progressNote={meeting.progressNote}
         meeting={{
           id: meeting.id,
           title: meeting.title,

@@ -65,6 +65,35 @@ export const summarySchema = z.object({
 
 export type SummaryResult = z.infer<typeof summarySchema>;
 
+export const chunkNotesSchema = z.object({
+  headline: z.string().describe("One sentence naming what this section of the meeting covered."),
+  key_points: z
+    .array(z.string())
+    .describe("Two to five specific points from this section. Keep numbers, names and dates exactly as spoken."),
+  chapters: z
+    .array(
+      z.object({
+        title: z.string().describe("Chapter title, two to six words."),
+        start_sentence_index: z.number().int().describe("Index marking where this chapter begins."),
+        summary: z.string().describe("One sentence on what this chapter covers."),
+      }),
+    )
+    .describe("One to three chapters covering this section."),
+  action_items: z
+    .array(
+      z.object({
+        text: z.string().describe("The commitment, phrased as an imperative task."),
+        assignee: z.string().nullable(),
+        due_date: z.string().nullable(),
+        sentence_index: z.number().int().nullable(),
+      }),
+    )
+    .describe("Explicit commitments made in this section. Empty array if none."),
+  keywords: z.array(z.string()).describe("Up to five distinctive topic keywords from this section."),
+});
+
+export type ChunkNotes = z.infer<typeof chunkNotesSchema>;
+
 export const classifySchema = z.object({
   tasks: z.array(z.number().int()).describe("Sentence indices that state a commitment, assignment, or to-do."),
   questions: z.array(z.number().int()).describe("Sentence indices that ask a genuine question."),

@@ -36,6 +36,7 @@ export async function generateJson<T>(
   schemaName: string,
   system: string,
   parts: ContentPart[],
+  maxTokens?: number,
 ): Promise<T> {
   const provider = activeProvider();
 
@@ -46,7 +47,7 @@ export async function generateJson<T>(
 
   if (provider === "openai-compatible") {
     const { openAiJson } = await import("./providers/openai-compatible");
-    const raw = await openAiJson(jsonSchemaFor(schema, schemaName), system, parts);
+    const raw = await openAiJson(jsonSchemaFor(schema, schemaName), system, parts, maxTokens);
     return schema.parse(raw);
   }
 

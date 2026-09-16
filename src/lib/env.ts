@@ -13,6 +13,7 @@ export const env = {
   llmModel: process.env.LLM_MODEL ?? "",
   llmMaxTokens: Number(process.env.LLM_MAX_TOKENS ?? 3500),
   llmReasoningEffort: process.env.LLM_REASONING_EFFORT ?? "low",
+  llmTpmBudget: Number(process.env.LLM_TPM_BUDGET ?? 8000),
   blobToken: process.env.BLOB_READ_WRITE_TOKEN ?? "",
   recallApiKey: process.env.RECALL_API_KEY ?? "",
   recallRegion: process.env.RECALL_REGION ?? "us-west-2",

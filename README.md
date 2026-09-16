@@ -144,6 +144,25 @@ defence needed):
 2. **classify** — returns the sentence *indices* matching each filter category. Returning indices
    rather than echoing text keeps output tokens small.
 
+### Long meetings
+
+A 55-minute call is ~1,000 sentences. Two things make that work on a free tier:
+
+**Compact rendering.** Consecutive sentences by the same speaker are merged into one turn, so the
+`#index mm:ss Speaker:` prefix is written once per turn instead of once per sentence. On a real
+55-minute analyst call that was 81 prefixes instead of 1,032 — about 6,400 tokens saved, 37% of
+the prompt.
+
+**Map-reduce when it still doesn't fit.** The transcript is split into chunks sized from
+`LLM_TPM_BUDGET`, each chunk is summarized into compact section notes (headline, key points,
+chapters, action items), and a final pass merges them — deduplicating commitments and keeping
+chronological order. The merge input is a few hundred tokens regardless of meeting length, so
+this scales to any duration; only wall-clock grows. Anthropic skips chunking entirely.
+
+Note the constraint is **rate limit, not context window**: `gpt-oss-120b` has 131k context, but
+Groq's free tier allows 8,000 tokens per minute and counts `max_tokens` against it. Progress is
+surfaced in the UI ("Reading section 2 of 4") since a long run takes minutes.
+
 **Analytics are computed in TypeScript, not by the model** — talk time, words per minute, filler
 words, longest monologue and question counts are arithmetic over word timings. Cheaper, instant,
 and exactly right where a model would approximate.

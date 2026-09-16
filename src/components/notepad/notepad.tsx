@@ -40,6 +40,7 @@ export function Notepad({
   comments,
   bookmarks,
   provider,
+  progressNote,
 }: {
   meeting: MeetingHeaderData;
   sentences: TranscriptSentence[];
@@ -50,6 +51,7 @@ export function Notepad({
   comments: CommentRow[];
   bookmarks: BookmarkRow[];
   provider: string;
+  progressNote: string | null;
 }) {
   const router = useRouter();
   const params = useSearchParams();
@@ -148,6 +150,7 @@ export function Notepad({
                   summary={summary}
                   status={meeting.status}
                   provider={provider}
+                  progressNote={progressNote}
                   onSeekSentence={(index) => {
                     if (index === null) return;
                     const ms = indexToMs.get(index);

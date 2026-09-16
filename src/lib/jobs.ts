@@ -17,7 +17,11 @@ import { hasAnthropic } from "@/lib/env";
 export type JobStep = "summarize" | "transcribe" | "bot";
 
 const MAX_ATTEMPTS = 3;
-const STALE_MS = 5 * 60 * 1000;
+const STALE_MS = Number(process.env.JOB_STALE_MS ?? 20 * 60 * 1000);
+
+export async function setProgress(meetingId: string, note: string | null) {
+  await db.update(meetings).set({ progressNote: note }).where(eq(meetings.id, meetingId));
+}
 
 export async function enqueue(
   meetingId: string,
@@ -167,7 +171,11 @@ export async function summarizeMeeting(
   const templateId = typeof payload.template === "string" ? payload.template : "general";
 
   const useAi = hasAnthropic();
-  const classified = useAi ? await classifySentences(lines) : heuristicClassify(lines);
+  const progress = (note: string | null) => setProgress(meetingId, note);
+
+  const classified = useAi
+    ? await classifySentences(lines, progress)
+    : heuristicClassify(lines);
   const filters = toAiFilters(classified, rows.length);
 
   for (const row of rows) {
@@ -180,7 +188,7 @@ export async function summarizeMeeting(
   }
 
   const summary = useAi
-    ? await generateSummary(lines, templateId, meeting.title)
+    ? await generateSummary(lines, templateId, meeting.title, progress)
     : heuristicSummary(lines, classified, meeting.title, "Meeting");
 
   const indexToMs = new Map(rows.map((s) => [s.index, s.startMs]));
@@ -253,6 +261,12 @@ export async function summarizeMeeting(
 
   await db
     .update(meetings)
-    .set({ status: "completed", isLive: false, updatedAt: new Date(), failureReason: null })
+    .set({
+      status: "completed",
+      isLive: false,
+      updatedAt: new Date(),
+      failureReason: null,
+      progressNote: null,
+    })
     .where(eq(meetings.id, meetingId));
 }

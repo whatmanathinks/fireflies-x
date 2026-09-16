@@ -88,6 +88,7 @@ export async function openAiJson(
   jsonSchema: { name: string; schema: Record<string, unknown> },
   system: string,
   parts: ContentPart[],
+  maxTokens?: number,
 ): Promise<unknown> {
   const messages = [
     { role: "system", content: system },
@@ -98,7 +99,7 @@ export async function openAiJson(
     const res = await post({
       model: env.llmModel,
       messages,
-      max_tokens: env.llmMaxTokens,
+      max_tokens: maxTokens ?? env.llmMaxTokens,
       temperature: 0.3,
       response_format: responseFormat,
     });
