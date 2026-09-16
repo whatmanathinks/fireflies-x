@@ -276,6 +276,12 @@ Without the key the same flow runs as a **simulation** — the state machine, ti
 updates and downstream pipeline are all real, only the audio is a sample. The dialog states which
 mode it is in.
 
+**Optional: instant bot updates.** Progress works on polling alone, but Recall can push status
+changes instead. In the Recall dashboard (your region, e.g. `ap-northeast-1.recall.ai/dashboard/webhooks`)
+add an endpoint pointing at `/api/webhooks/recall?secret=<INTERNAL_JOB_SECRET>` and subscribe to the
+`bot.*` status events. The handler re-queues the bot job immediately, so transitions land in about a
+second instead of on the next poll.
+
 **Progress is driven by polling, not webhooks**, so it works locally with no tunnel: the `bot` job
 re-enqueues itself every 5s until the call ends. A dev job runner (`src/instrumentation.ts`) ticks
 the queue every 3s in development; production uses the cron sweeper, and `/api/webhooks/recall`
