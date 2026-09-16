@@ -6,7 +6,7 @@ import { meetings, sentences } from "@/db/schema";
 import { fail, handle } from "@/lib/api";
 import { requireSession } from "@/lib/auth";
 import { hasDeepgram } from "@/lib/env";
-import { enqueue, runDueJobs } from "@/lib/jobs";
+import { enqueue, triggerJobRunner } from "@/lib/jobs";
 import { applyScriptedTranscript } from "@/lib/stt/pipeline";
 
 export const maxDuration = 300;
@@ -64,7 +64,7 @@ export async function POST(
       await enqueue(id, "summarize");
     }
 
-    after(() => runDueJobs(4));
+    after(() => triggerJobRunner());
 
     return { status: "queued" };
   });

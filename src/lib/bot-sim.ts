@@ -21,7 +21,14 @@ const SEQUENCE = [
   { from: "leaving", to: "processing", delayMs: 2000 },
 ] as const;
 
-const POLL_INTERVAL_MS = 5000;
+const POLL_FAST_MS = 4000;
+const POLL_SLOW_MS = 15000;
+
+function pollDelayFor(code: string | undefined) {
+  return code === "in_call_recording" || code === "in_call_not_recording"
+    ? POLL_SLOW_MS
+    : POLL_FAST_MS;
+}
 const MAX_POLL_MS = 4 * 60 * 60 * 1000;
 
 export async function advanceBot(meetingId: string) {
@@ -92,7 +99,7 @@ async function pollRecallBot(meetingId: string, botId: string, createdAt: Date) 
           updatedAt: new Date(),
         })
         .where(eq(meetings.id, meetingId));
-      await enqueue(meetingId, "bot", {}, POLL_INTERVAL_MS);
+      await enqueue(meetingId, "bot", {}, POLL_FAST_MS);
       return;
     }
 
@@ -130,7 +137,7 @@ async function pollRecallBot(meetingId: string, botId: string, createdAt: Date) 
     return;
   }
 
-  await enqueue(meetingId, "bot", {}, POLL_INTERVAL_MS);
+  await enqueue(meetingId, "bot", {}, pollDelayFor(code));
 }
 
 async function advanceSimulation(meetingId: string, current: string) {

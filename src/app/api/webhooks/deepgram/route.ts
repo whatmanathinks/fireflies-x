@@ -4,7 +4,7 @@ import { db } from "@/db";
 import { meetings } from "@/db/schema";
 import { fail, isInternalRequest, ok } from "@/lib/api";
 import { failureCodeOf, isPermanent } from "@/lib/errors";
-import { enqueue, runDueJobs } from "@/lib/jobs";
+import { enqueue, triggerJobRunner } from "@/lib/jobs";
 import { persistDeepgramResult } from "@/lib/stt/pipeline";
 import type { DeepgramResponse } from "@/lib/stt/deepgram";
 
@@ -46,7 +46,7 @@ export async function POST(request: Request) {
   }
 
   await enqueue(meetingId, "summarize");
-  after(() => runDueJobs(4));
+  after(() => triggerJobRunner());
 
   return ok({ received: true });
 }

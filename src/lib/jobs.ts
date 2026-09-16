@@ -12,13 +12,25 @@ import {
 import { heuristicClassify, heuristicSummary } from "@/lib/ai/fallback";
 import { classifySentences, generateSummary, toAiFilters } from "@/lib/ai/summarize";
 import { computeAnalytics } from "@/lib/analytics";
-import { hasAnthropic } from "@/lib/env";
+import { env, hasAnthropic } from "@/lib/env";
 import { failureCodeOf, isPermanent, PermanentError } from "@/lib/errors";
 
 export type JobStep = "summarize" | "transcribe" | "bot";
 
 const MAX_ATTEMPTS = 3;
 const STALE_MS = Number(process.env.JOB_STALE_MS ?? 20 * 60 * 1000);
+
+/** Starts the chaining job runner so delayed work (bot polling) keeps advancing. */
+export async function triggerJobRunner(limit = 4) {
+  try {
+    await fetch(
+      `${env.publicBaseUrl}/api/jobs/run?secret=${env.internalSecret}&limit=${limit}`,
+      { method: "POST" },
+    );
+  } catch {
+    await runDueJobs(limit);
+  }
+}
 
 export async function setProgress(meetingId: string, note: string | null) {
   await db.update(meetings).set({ progressNote: note }).where(eq(meetings.id, meetingId));
@@ -81,18 +93,19 @@ async function claimJobs(limit: number) {
 }
 
 export async function hasDueWork() {
+  const ms = await nextDueInMs();
+  return ms !== null && ms <= 0;
+}
+
+/** ms until the next queued job is runnable. Negative means overdue, null means nothing queued. */
+export async function nextDueInMs() {
   const [row] = await db
-    .select({ id: jobs.id })
+    .select({ runAfter: jobs.runAfter })
     .from(jobs)
-    .where(
-      and(
-        lte(jobs.runAfter, new Date()),
-        eq(jobs.status, "queued"),
-        lt(jobs.attempts, MAX_ATTEMPTS),
-      ),
-    )
+    .where(and(eq(jobs.status, "queued"), lt(jobs.attempts, MAX_ATTEMPTS)))
+    .orderBy(asc(jobs.runAfter))
     .limit(1);
-  return !!row;
+  return row ? row.runAfter.getTime() - Date.now() : null;
 }
 
 export async function runDueJobs(limit = 3) {

@@ -4,7 +4,7 @@ import { db } from "@/db";
 import { meetings, sentences } from "@/db/schema";
 import { handle } from "@/lib/api";
 import { requireSession } from "@/lib/auth";
-import { enqueue, runDueJobs } from "@/lib/jobs";
+import { enqueue, triggerJobRunner } from "@/lib/jobs";
 
 export const maxDuration = 300;
 
@@ -34,7 +34,7 @@ export async function POST(
     }
 
     await enqueue(id, "summarize", { template: body.template ?? "general" });
-    after(() => runDueJobs(4));
+    after(() => triggerJobRunner());
     return { queued: true };
   });
 }

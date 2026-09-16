@@ -7,7 +7,7 @@ import { fail, handle } from "@/lib/api";
 import { requireSession } from "@/lib/auth";
 import { createBot } from "@/lib/bot/recall";
 import { hasRecall } from "@/lib/env";
-import { enqueue, runDueJobs } from "@/lib/jobs";
+import { enqueue, triggerJobRunner } from "@/lib/jobs";
 
 const createSchema = z.object({
   title: z.string().min(1).max(200),
@@ -69,7 +69,7 @@ export async function POST(request: Request) {
 
     if (input.source === "upload" && input.audioUrl) {
       await enqueue(meeting.id, "transcribe");
-      after(() => runDueJobs(4));
+      after(() => triggerJobRunner());
     }
 
     if (input.source === "bot_sim") {
@@ -95,7 +95,7 @@ export async function POST(request: Request) {
       }
 
       await enqueue(meeting.id, "bot", {}, 1500);
-      after(() => runDueJobs(4));
+      after(() => triggerJobRunner());
     }
 
     return { id: meeting.id, status: meeting.status, simulated: !hasRecall() };

@@ -3,7 +3,7 @@ import { after } from "next/server";
 import { db } from "@/db";
 import { meetings } from "@/db/schema";
 import { fail, ok } from "@/lib/api";
-import { enqueue, runDueJobs } from "@/lib/jobs";
+import { enqueue, triggerJobRunner } from "@/lib/jobs";
 import { env } from "@/lib/env";
 
 export const maxDuration = 300;
@@ -32,7 +32,7 @@ export async function POST(request: Request) {
   if (!meeting) return ok({ skipped: true, reason: "unknown bot" });
 
   await enqueue(meeting.id, "bot");
-  after(() => runDueJobs(2));
+  after(() => triggerJobRunner());
 
   return ok({ received: true, event: payload?.event });
 }
