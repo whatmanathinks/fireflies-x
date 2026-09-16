@@ -12,7 +12,12 @@ Recall.ai  ──▶  Deepgram Nova-3  ──▶  GPT-OSS 120B
 joins the      diarized transcript,    notes, chapters, tasks,
 meeting and    word-level timings      answers that cite the moment
 records it                             (bring your own model)
+(audio only)
 ```
+
+Recall.ai is used for **audio capture only** — its transcription add-on is deliberately unused, so
+bot recordings, browser recordings and uploaded files all share one Deepgram path and behave
+identically.
 
 Repo: <https://github.com/whatmanathinks/fireflies-x>
 
@@ -287,6 +292,11 @@ add an endpoint pointing at `/api/webhooks/recall?secret=<INTERNAL_JOB_SECRET>` 
 `bot.*` status events. The handler re-queues the bot job immediately, so transitions land in about a
 second instead of on the next poll.
 
+**Only the audio is taken from Recall.** Its transcription add-on is not used: one transcription
+path for every capture route means speaker labelling, word timings and the sentence model behave
+the same whatever the source, and the bot stays replaceable because nothing downstream knows where
+the audio came from.
+
 **Progress is driven by polling, not webhooks**, so it works locally with no tunnel: the `bot` job
 re-enqueues itself every 5s until the call ends. A dev job runner (`src/instrumentation.ts`) ticks
 the queue every 3s in development; production uses the cron sweeper, and `/api/webhooks/recall`
@@ -305,7 +315,7 @@ is available to drive transitions instantly if you point the Recall dashboard at
 | [Anthropic Claude](https://anthropic.com) | Notes, sentence classification, AskFred |
 | [wavesurfer.js](https://wavesurfer.xyz) | Waveform + playback |
 | [Radix UI](https://radix-ui.com) · [Tailwind v4](https://tailwindcss.com) · [lucide](https://lucide.dev) · [cmdk](https://cmdk.paco.me) · [sonner](https://sonner.emilkowal.ski) | UI primitives |
-| [Recall.ai](https://recall.ai) | Real notetaker bots for Meet / Zoom / Teams |
+| [Recall.ai](https://recall.ai) | Real notetaker bots for Meet / Zoom / Teams (recording only) |
 | [Vercel Blob](https://vercel.com/docs/vercel-blob) | Media storage |
 | [Playwright](https://playwright.dev) | End-to-end test scripts |
 
