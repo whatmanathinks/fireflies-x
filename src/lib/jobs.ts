@@ -53,6 +53,18 @@ export async function triggerJobRunner(limit = 4) {
   }
 }
 
+/** Persists partial work on the job row so a retry resumes instead of restarting. */
+export async function saveJobState(
+  meetingId: string,
+  step: JobStep,
+  payload: Record<string, unknown>,
+) {
+  await db
+    .update(jobs)
+    .set({ payload })
+    .where(and(eq(jobs.meetingId, meetingId), eq(jobs.step, step)));
+}
+
 export async function setProgress(meetingId: string, note: string | null) {
   await db.update(meetings).set({ progressNote: note }).where(eq(meetings.id, meetingId));
 }
@@ -211,8 +223,8 @@ export async function summarizeMeeting(
   payload: Record<string, unknown> = {},
 ) {
   const startedAt = Date.now();
-  const state = payload as SummarizeState;
-  const templateId = typeof state.template === "string" ? state.template : "general";
+  const incoming = payload as SummarizeState;
+  const templateId = typeof incoming.template === "string" ? incoming.template : "general";
 
   const meeting = await db.query.meetings.findFirst({ where: eq(meetings.id, meetingId) });
   if (!meeting) throw new Error("Meeting not found");
@@ -260,9 +272,16 @@ export async function summarizeMeeting(
     void setProgress(meetingId, `${stage} · ${n.message}${suffix}`);
   };
 
-  const park = async (next: SummarizeState, note: string) => {
+  let state: SummarizeState = { ...(payload as SummarizeState), template: templateId };
+
+  const checkpoint = async (next: Partial<SummarizeState>) => {
+    state = { ...state, ...next };
+    await saveJobState(meetingId, "summarize", state as Record<string, unknown>);
+  };
+
+  const park = async (note: string) => {
     await setProgress(meetingId, note);
-    await enqueue(meetingId, "summarize", next as Record<string, unknown>, 1000);
+    await enqueue(meetingId, "summarize", state as Record<string, unknown>, 1000);
   };
 
   let classified: ClassifyResult;
@@ -271,8 +290,8 @@ export async function summarizeMeeting(
     classified = heuristicClassify(lines);
   } else {
     const chunks = planClassify(lines);
-    let acc = state.classified ?? emptyClassified();
-    let done = state.classifyDone ?? 0;
+    let acc = incoming.classified ?? emptyClassified();
+    let done = incoming.classifyDone ?? 0;
 
     while (done < chunks.length) {
       if (chunks.length > 1) {
@@ -280,12 +299,10 @@ export async function summarizeMeeting(
       }
       acc = mergeClassified(acc, await classifyChunk(chunks[done], notice));
       done += 1;
+      await checkpoint({ classified: acc, classifyDone: done });
 
       if (done < chunks.length && outOfTime()) {
-        await park(
-          { ...state, template: templateId, classified: acc, classifyDone: done },
-          `Labelling transcript, part ${done} of ${chunks.length}`,
-        );
+        await park(`Labelled ${done} of ${chunks.length} parts`);
         return;
       }
     }
@@ -310,7 +327,7 @@ export async function summarizeMeeting(
       await setStage("Writing your notes");
       summary = await summarizeWhole(plan.rendered, templateId, meeting.title, notice);
     } else {
-      const sections = state.sections ?? [];
+      const sections = incoming.sections ?? [];
 
       while (sections.length < plan.chunks.length) {
         const i = sections.length;
@@ -321,11 +338,10 @@ export async function summarizeMeeting(
           ),
         );
 
+        await checkpoint({ sections });
+
         if (sections.length < plan.chunks.length && outOfTime()) {
-          await park(
-            { ...state, template: templateId, classified, classifyDone: undefined, sections },
-            `Read ${sections.length} of ${plan.chunks.length} sections`,
-          );
+          await park(`Read ${sections.length} of ${plan.chunks.length} sections`);
           return;
         }
       }
