@@ -59,6 +59,7 @@ export default async function HomePage() {
         <QuickActions
           liveEnabled={hasDeepgram()}
           blobEnabled={hasBlob()}
+          blobPresigned={hasBlob() && !process.env.BLOB_READ_WRITE_TOKEN}
           realNotetaker={hasRecall()}
         />
 

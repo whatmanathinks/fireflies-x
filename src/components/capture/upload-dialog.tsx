@@ -1,6 +1,6 @@
 "use client";
 
-import { upload } from "@vercel/blob/client";
+import { upload, uploadPresigned } from "@vercel/blob/client";
 import { FileAudio, Loader2, UploadCloud, X } from "lucide-react";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
@@ -27,11 +27,13 @@ export function UploadDialog({
   onOpenChange,
   onCreated,
   blobEnabled,
+  presigned,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onCreated: (meetingId: string) => void;
   blobEnabled?: boolean;
+  presigned?: boolean;
 }) {
   const [file, setFile] = useState<File | null>(null);
   const [title, setTitle] = useState("");
@@ -63,11 +65,17 @@ export function UploadDialog({
       let audioUrl: string;
 
       if (blobEnabled) {
-        const blob = await upload(`uploads/${Date.now()}-${file.name}`, file, {
-          access: "public",
+        const pathname = `uploads/${Date.now()}-${file.name}`;
+        const options = {
+          access: "public" as const,
           handleUploadUrl: "/api/uploads",
-          onUploadProgress: ({ percentage }) => setProgress(Math.max(5, percentage * 0.9)),
-        });
+          multipart: file.size > 8 * 1024 * 1024,
+          onUploadProgress: ({ percentage }: { percentage: number }) =>
+            setProgress(Math.max(5, percentage * 0.9)),
+        };
+        const blob = presigned
+          ? await uploadPresigned(pathname, file, options)
+          : await upload(pathname, file, options);
         audioUrl = blob.url;
       } else {
         const form = new FormData();

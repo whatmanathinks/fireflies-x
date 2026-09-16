@@ -39,6 +39,7 @@ export function Topbar({
   demoMode,
   liveEnabled,
   blobEnabled,
+  blobPresigned,
   realNotetaker,
   onOpenSearch,
 }: {
@@ -46,6 +47,7 @@ export function Topbar({
   demoMode: boolean;
   liveEnabled: boolean;
   blobEnabled: boolean;
+  blobPresigned: boolean;
   realNotetaker: boolean;
   onOpenSearch: () => void;
 }) {
@@ -148,6 +150,7 @@ export function Topbar({
       <UploadDialog
         open={dialog === "upload"}
         blobEnabled={blobEnabled}
+        presigned={blobPresigned}
         onOpenChange={(v: boolean) => setDialog(v ? "upload" : null)}
         onCreated={(id: string) => router.push(`/meetings/${id}`)}
       />

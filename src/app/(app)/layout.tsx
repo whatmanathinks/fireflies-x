@@ -28,6 +28,7 @@ export default async function AppLayout({
       demoMode={demoMode()}
       liveEnabled={hasDeepgram()}
       blobEnabled={hasBlob()}
+      blobPresigned={hasBlob() && !process.env.BLOB_READ_WRITE_TOKEN}
       realNotetaker={hasRecall()}
     >
       {children}

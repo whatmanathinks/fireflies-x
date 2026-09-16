@@ -15,6 +15,7 @@ export const env = {
   llmReasoningEffort: process.env.LLM_REASONING_EFFORT ?? "low",
   llmTpmBudget: Number(process.env.LLM_TPM_BUDGET ?? 8000),
   blobToken: process.env.BLOB_READ_WRITE_TOKEN ?? "",
+  blobStoreId: process.env.BLOB_STORE_ID ?? "",
   recallApiKey: process.env.RECALL_API_KEY ?? "",
   recallRegion: process.env.RECALL_REGION ?? "us-west-2",
   internalSecret: process.env.INTERNAL_JOB_SECRET ?? "dev-internal-secret",
@@ -29,7 +30,7 @@ export const env = {
 export const hasDeepgram = () => !!env.deepgramApiKey && !env.forceDemo;
 export const hasAnthropic = () =>
   !env.forceDemo && (!!env.anthropicApiKey || (!!env.llmApiKey && !!env.llmBaseUrl));
-export const hasBlob = () => !!env.blobToken;
+export const hasBlob = () => !!env.blobToken || !!env.blobStoreId;
 export const hasGoogle = () => !!env.googleClientId && !!env.googleClientSecret;
 export const hasRecall = () => !!env.recallApiKey && !env.forceDemo;
 
@@ -47,6 +48,6 @@ export const missingKeys = () => {
   if (!env.deepgramApiKey) missing.push("DEEPGRAM_API_KEY");
   if (!hasAnthropic()) missing.push("ANTHROPIC_API_KEY (or LLM_API_KEY + LLM_BASE_URL)");
   if (!hasGoogle()) missing.push("AUTH_GOOGLE_ID / AUTH_GOOGLE_SECRET");
-  if (!env.blobToken) missing.push("BLOB_READ_WRITE_TOKEN");
+  if (!hasBlob()) missing.push("BLOB_READ_WRITE_TOKEN (or BLOB_STORE_ID via OIDC)");
   return missing;
 };

@@ -10,8 +10,8 @@ export async function putAudio(key: string, body: Buffer, contentType: string) {
     const blob = await put(key, body, {
       access: "public",
       contentType,
-      token: env.blobToken,
       addRandomSuffix: true,
+      ...(env.blobToken ? { token: env.blobToken } : {}),
     });
     return blob.url;
   }

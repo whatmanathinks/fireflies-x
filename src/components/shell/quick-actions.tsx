@@ -34,10 +34,12 @@ const ACTIONS = (realNotetaker: boolean) => [
 export function QuickActions({
   liveEnabled,
   blobEnabled,
+  blobPresigned,
   realNotetaker,
 }: {
   liveEnabled: boolean;
   blobEnabled: boolean;
+  blobPresigned: boolean;
   realNotetaker: boolean;
 }) {
   const router = useRouter();
@@ -69,6 +71,7 @@ export function QuickActions({
       <UploadDialog
         open={dialog === "upload"}
         blobEnabled={blobEnabled}
+        presigned={blobPresigned}
         onOpenChange={(v: boolean) => setDialog(v ? "upload" : null)}
         onCreated={go}
       />

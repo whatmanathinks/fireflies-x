@@ -15,6 +15,7 @@ export async function GET() {
       liveTranscription: live.ok,
       liveTranscriptionReason: live.reason,
       blobStorage: hasBlob(),
+      blobPresigned: hasBlob() && !process.env.BLOB_READ_WRITE_TOKEN,
       realNotetaker: hasRecall(),
     };
   });

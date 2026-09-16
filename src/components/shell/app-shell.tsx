@@ -10,6 +10,7 @@ export function AppShell({
   demoMode,
   liveEnabled,
   blobEnabled,
+  blobPresigned,
   realNotetaker,
   children,
 }: {
@@ -17,6 +18,7 @@ export function AppShell({
   demoMode: boolean;
   liveEnabled: boolean;
   blobEnabled: boolean;
+  blobPresigned: boolean;
   realNotetaker: boolean;
   children: React.ReactNode;
 }) {
@@ -42,6 +44,7 @@ export function AppShell({
           demoMode={demoMode}
           liveEnabled={liveEnabled}
           blobEnabled={blobEnabled}
+          blobPresigned={blobPresigned}
           realNotetaker={realNotetaker}
           onOpenSearch={() => setPaletteOpen(true)}
         />
