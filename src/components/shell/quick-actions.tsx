@@ -8,7 +8,7 @@ import { RecordDialog } from "@/components/capture/record-dialog";
 import { UploadDialog } from "@/components/capture/upload-dialog";
 import { Card } from "@/components/ui/misc";
 
-const ACTIONS = [
+const ACTIONS = (realNotetaker: boolean) => [
   {
     key: "record" as const,
     icon: Mic,
@@ -25,16 +25,20 @@ const ACTIONS = [
     key: "live" as const,
     icon: Video,
     title: "Add to live meeting",
-    body: "Send the notetaker to a call (simulated)",
+    body: realNotetaker
+      ? "Send a real notetaker bot into Meet, Zoom or Teams"
+      : "Send the notetaker to a call (simulated)",
   },
 ];
 
 export function QuickActions({
   liveEnabled,
   blobEnabled,
+  realNotetaker,
 }: {
   liveEnabled: boolean;
   blobEnabled: boolean;
+  realNotetaker: boolean;
 }) {
   const router = useRouter();
   const [dialog, setDialog] = useState<"record" | "upload" | "live" | null>(null);
@@ -43,7 +47,7 @@ export function QuickActions({
   return (
     <>
       <div className="mt-5 grid gap-2.5 sm:grid-cols-3">
-        {ACTIONS.map(({ key, icon: Icon, title, body }) => (
+        {ACTIONS(realNotetaker).map(({ key, icon: Icon, title, body }) => (
           <button key={key} onClick={() => setDialog(key)} className="text-left">
             <Card className="h-full px-3.5 py-3 transition hover:border-brand-300 hover:shadow-sm">
               <span className="mb-2 flex size-8 items-center justify-center rounded-lg bg-brand-50 text-brand-600">

@@ -56,7 +56,7 @@ export default async function SharePage({
           <span className="flex size-7 items-center justify-center rounded-lg bg-brand-600 text-[13px] font-bold text-white">
             F
           </span>
-          <span className="text-[13px] font-semibold text-ink-900">Fireflies Clone</span>
+          <span className="text-[13px] font-semibold text-ink-900">FireflyX</span>
           <span className="ml-auto rounded-md bg-ink-100 px-2 py-0.5 text-[11.5px] text-ink-500">
             Shared notes
           </span>

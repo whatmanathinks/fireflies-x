@@ -4,7 +4,14 @@ import { db } from "@/db";
 import { workspaces } from "@/db/schema";
 import { providerLabel } from "@/lib/ai/provider";
 import { requireSession } from "@/lib/auth";
-import { hasBlob, hasDeepgram, hasGoogle, isLocalHost, missingKeys } from "@/lib/env";
+import {
+  hasBlob,
+  hasDeepgram,
+  hasGoogle,
+  hasRecall,
+  isLocalHost,
+  missingKeys,
+} from "@/lib/env";
 
 export const dynamic = "force-dynamic";
 
@@ -32,6 +39,7 @@ export default async function SettingsPage() {
         blob: hasBlob(),
         google: hasGoogle(),
         webhooks: !isLocalHost(),
+        notetaker: hasRecall(),
         missing: missingKeys(),
       }}
     />

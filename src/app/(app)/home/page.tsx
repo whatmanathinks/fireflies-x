@@ -6,7 +6,7 @@ import { Avatar, AvatarStack, Badge, Card, EmptyState, SectionLabel } from "@/co
 import { db } from "@/db";
 import { meetings } from "@/db/schema";
 import { requireSession } from "@/lib/auth";
-import { hasBlob, hasDeepgram } from "@/lib/env";
+import { hasBlob, hasDeepgram, hasRecall } from "@/lib/env";
 import { listTasks, recentMeetingsWithSummary, workspaceStats } from "@/lib/queries";
 import { formatDuration } from "@/lib/utils";
 
@@ -56,7 +56,11 @@ export default async function HomePage() {
             : `${stats.meetingCount} meetings · ${formatDuration(stats.totalMs)} captured · ${stats.openTasks} open ${stats.openTasks === 1 ? "task" : "tasks"}`}
         </p>
 
-        <QuickActions liveEnabled={hasDeepgram()} blobEnabled={hasBlob()} />
+        <QuickActions
+          liveEnabled={hasDeepgram()}
+          blobEnabled={hasBlob()}
+          realNotetaker={hasRecall()}
+        />
 
         {inFlight.length > 0 && (
           <section className="mt-7">

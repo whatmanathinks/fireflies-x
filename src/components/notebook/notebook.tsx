@@ -78,7 +78,7 @@ export type ChannelRow = {
 const SOURCE_META: Record<string, { icon: React.ElementType; label: string }> = {
   browser: { icon: MonitorSpeaker, label: "Browser recording" },
   upload: { icon: Upload, label: "Uploaded file" },
-  bot_sim: { icon: Bot, label: "Notetaker bot (simulated)" },
+  bot_sim: { icon: Bot, label: "Notetaker bot" },
   seed: { icon: Users, label: "Sample meeting" },
 };
 

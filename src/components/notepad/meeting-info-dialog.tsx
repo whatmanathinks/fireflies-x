@@ -53,7 +53,7 @@ export function MeetingInfoDialog({
                 : meeting.captureSource === "upload"
                   ? "Uploaded file"
                   : meeting.captureSource === "bot_sim"
-                    ? "Notetaker bot (simulated)"
+                    ? "Notetaker bot"
                     : "Seeded sample"}
             </dd>
             <dt className="text-ink-400">Privacy</dt>

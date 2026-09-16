@@ -4,7 +4,7 @@ import { TooltipProvider } from "@/components/ui/primitives";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Fireflies Clone — AI Meeting Notes",
+  title: "FireflyX — AI Meeting Notes",
   description:
     "Record, transcribe, summarize and search your meetings. A working clone of Fireflies.ai.",
 };

@@ -4,7 +4,7 @@ import { AppShell } from "@/components/shell/app-shell";
 import { db } from "@/db";
 import { workspaces } from "@/db/schema";
 import { auth } from "@/lib/auth";
-import { demoMode, hasBlob, hasDeepgram } from "@/lib/env";
+import { demoMode, hasBlob, hasDeepgram, hasRecall } from "@/lib/env";
 
 export default async function AppLayout({
   children,
@@ -28,6 +28,7 @@ export default async function AppLayout({
       demoMode={demoMode()}
       liveEnabled={hasDeepgram()}
       blobEnabled={hasBlob()}
+      realNotetaker={hasRecall()}
     >
       {children}
     </AppShell>

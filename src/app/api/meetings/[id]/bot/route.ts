@@ -1,7 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { meetings } from "@/db/schema";
-import { fail, handle } from "@/lib/api";
+import { handle } from "@/lib/api";
 import { requireSession } from "@/lib/auth";
 import { leaveCall } from "@/lib/bot/recall";
 import { hasRecall } from "@/lib/env";

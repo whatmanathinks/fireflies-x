@@ -4,7 +4,6 @@ import {
   ArrowRight,
   BarChart3,
   Bot,
-  Check,
   ListChecks,
   Mic,
   Search,
@@ -13,7 +12,7 @@ import {
 } from "lucide-react";
 import { signIn } from "next-auth/react";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 const FEATURES = [
   {
@@ -57,9 +56,20 @@ const STEPS = [
 export function Landing({ signedIn }: { signedIn: boolean }) {
   const [pending, setPending] = useState(false);
 
+  useEffect(() => {
+    const reset = () => setPending(false);
+    window.addEventListener("pageshow", reset);
+    window.addEventListener("focus", reset);
+    return () => {
+      window.removeEventListener("pageshow", reset);
+      window.removeEventListener("focus", reset);
+    };
+  }, []);
+
   const startDemo = () => {
     setPending(true);
     signIn("demo", { callbackUrl: "/home" });
+    setTimeout(() => setPending(false), 8000);
   };
 
   return (
@@ -90,14 +100,14 @@ export function Landing({ signedIn }: { signedIn: boolean }) {
               <span className="flex size-8 items-center justify-center rounded-lg bg-brand-600 text-[15px] font-bold">
                 F
               </span>
-              <span className="text-[15px] font-semibold tracking-tight">Fireflies Clone</span>
+              <span className="text-[15px] font-semibold tracking-tight">FireflyX</span>
             </Link>
 
             <nav className="ml-8 hidden items-center gap-6 text-[13.5px] text-white/60 md:flex">
               <a href="#features" className="transition hover:text-white">Features</a>
               <a href="#how" className="transition hover:text-white">How it works</a>
               <a
-                href="https://github.com/manasgoel/fireflies-clone"
+                href="https://github.com/whatmanathinks/fireflies-x"
                 className="transition hover:text-white"
               >
                 Source
@@ -159,41 +169,19 @@ export function Landing({ signedIn }: { signedIn: boolean }) {
               No signup. The demo account is loaded with real transcribed meetings.
             </p>
 
-            <div className="mt-9 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-[12.5px] text-white/50">
-              {[
-                "Deepgram Nova-3 diarization",
-                "Bring your own model",
-                "Recall.ai notetaker bots",
-                "Open source",
-              ].map((label) => (
-                <span key={label} className="inline-flex items-center gap-1.5">
-                  <Check className="size-3.5 text-emerald-400" />
-                  {label}
-                </span>
-              ))}
+            <div className="mx-auto mt-6 inline-flex items-center gap-2 rounded-full border border-emerald-400/25 bg-emerald-400/[0.07] px-3.5 py-1.5">
+              <span className="relative flex size-1.5">
+                <span className="absolute inline-flex size-full animate-ping rounded-full bg-emerald-400 opacity-60" />
+                <span className="relative inline-flex size-1.5 rounded-full bg-emerald-400" />
+              </span>
+              <span className="text-[12.5px] font-medium text-emerald-300">
+                No simulation — the bot joins real meetings and records real output.
+              </span>
             </div>
+
           </section>
 
-          <section className="mx-auto max-w-6xl px-6 pb-20">
-            <div className="relative">
-              <div className="pointer-events-none absolute -inset-x-16 -top-10 h-64 bg-brand-500/20 blur-[90px]" />
-              <div className="relative overflow-hidden rounded-xl border border-white/10 bg-[#0d1018] shadow-2xl ring-1 ring-white/5">
-                <div className="flex items-center gap-2 border-b border-white/[0.07] bg-white/[0.03] px-3.5 py-2.5">
-                  <span className="size-2.5 rounded-full bg-[#ff5f57]" />
-                  <span className="size-2.5 rounded-full bg-[#febc2e]" />
-                  <span className="size-2.5 rounded-full bg-[#28c840]" />
-                  <span className="mx-auto rounded-md bg-white/[0.06] px-3 py-0.5 text-[11.5px] text-white/40">
-                    fireflies-clone.app/meetings
-                  </span>
-                </div>
-                <img
-                  src="/product-notepad.png"
-                  alt="The meeting notepad: AI notes on the left, timestamped transcript on the right"
-                  className="w-full"
-                />
-              </div>
-            </div>
-          </section>
+          <Pipeline />
         </div>
       </div>
 
@@ -297,7 +285,7 @@ export function Landing({ signedIn }: { signedIn: boolean }) {
             <span className="flex size-5 items-center justify-center rounded bg-brand-600 text-[10px] font-bold text-white">
               F
             </span>
-            Fireflies Clone
+            FireflyX
           </span>
           <span className="sm:ml-auto">
             An independent clone built as an engineering exercise — not affiliated with
@@ -317,5 +305,104 @@ function Starfield() {
       <div className="ff-stars absolute inset-0 opacity-70" />
       <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-b from-transparent to-[#080a12]" />
     </div>
+  );
+}
+
+const STAGES = [
+  {
+    step: "01",
+    vendor: "Recall.ai",
+    title: "Joins the meeting",
+    body: "A real bot dials into Google Meet, Zoom or Teams, sits in the call as a participant, and records it.",
+    detail: "Meet · Zoom · Teams",
+    accent: "from-sky-500/20 to-sky-500/0",
+    ring: "group-hover:border-sky-400/40",
+    dot: "bg-sky-400",
+    icon: Bot,
+  },
+  {
+    step: "02",
+    vendor: "Deepgram Nova-3",
+    title: "Turns audio into transcript",
+    body: "Speaker diarization with word-level timestamps, so every sentence knows who said it and exactly when.",
+    detail: "Diarized · word-level timings",
+    accent: "from-emerald-500/20 to-emerald-500/0",
+    ring: "group-hover:border-emerald-400/40",
+    dot: "bg-emerald-400",
+    icon: Waves,
+  },
+  {
+    step: "03",
+    vendor: "GPT-OSS 120B",
+    title: "Reads and analyses it",
+    body: "Overview, chapters, action items and answers — grounded in the transcript. Swap in Claude, Gemini or a local model any time.",
+    detail: "Bring your own model",
+    accent: "from-brand-500/25 to-brand-500/0",
+    ring: "group-hover:border-brand-400/50",
+    dot: "bg-brand-400",
+    icon: Sparkles,
+  },
+];
+
+function Pipeline() {
+  return (
+    <section className="mx-auto max-w-6xl px-6 pb-24">
+      <div className="mb-8 text-center">
+        <p className="text-[12px] font-semibold uppercase tracking-[0.18em] text-white/35">
+          How it actually works
+        </p>
+        <h2 className="mt-2.5 text-[26px] font-semibold tracking-[-0.02em] sm:text-[30px]">
+          Three services. One pipeline.
+        </h2>
+      </div>
+
+      <div className="grid gap-3 lg:grid-cols-3">
+        {STAGES.map((stage, i) => {
+          const Icon = stage.icon;
+          return (
+            <div key={stage.step} className="relative">
+              <div
+                className={`group relative h-full overflow-hidden rounded-xl border border-white/[0.08] bg-white/[0.02] p-5 transition ${stage.ring}`}
+              >
+                <div
+                  className={`pointer-events-none absolute inset-x-0 -top-16 h-32 bg-gradient-to-b ${stage.accent} blur-2xl`}
+                />
+                <div className="relative">
+                  <div className="mb-4 flex items-center gap-2.5">
+                    <span className="flex size-9 items-center justify-center rounded-lg border border-white/10 bg-white/[0.04]">
+                      <Icon className="size-[17px] text-white/80" />
+                    </span>
+                    <span className="font-mono text-[11px] text-white/30">{stage.step}</span>
+                    <span className="ml-auto inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.03] px-2 py-0.5 text-[11px] text-white/55">
+                      <span className={`size-1.5 rounded-full ${stage.dot}`} />
+                      {stage.vendor}
+                    </span>
+                  </div>
+
+                  <h3 className="text-[15.5px] font-semibold">{stage.title}</h3>
+                  <p className="mt-1.5 text-[13px] leading-relaxed text-white/50">{stage.body}</p>
+
+                  <p className="mt-4 border-t border-white/[0.07] pt-3 font-mono text-[11px] text-white/35">
+                    {stage.detail}
+                  </p>
+                </div>
+              </div>
+
+              {i < STAGES.length - 1 && (
+                <span className="absolute -right-[7px] top-1/2 z-10 hidden -translate-y-1/2 lg:block">
+                  <span className="flex size-3.5 items-center justify-center rounded-full border border-white/15 bg-[#0d1018]">
+                    <ArrowRight className="size-2 text-white/40" />
+                  </span>
+                </span>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      <p className="mt-5 text-center text-[12.5px] text-white/35">
+        Recording, transcription and analysis are all real. Nothing on this page is a mockup.
+      </p>
+    </section>
   );
 }

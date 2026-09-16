@@ -10,12 +10,14 @@ export function AppShell({
   demoMode,
   liveEnabled,
   blobEnabled,
+  realNotetaker,
   children,
 }: {
   user: SessionUser;
   demoMode: boolean;
   liveEnabled: boolean;
   blobEnabled: boolean;
+  realNotetaker: boolean;
   children: React.ReactNode;
 }) {
   const [paletteOpen, setPaletteOpen] = useState(false);
@@ -40,6 +42,7 @@ export function AppShell({
           demoMode={demoMode}
           liveEnabled={liveEnabled}
           blobEnabled={blobEnabled}
+          realNotetaker={realNotetaker}
           onOpenSearch={() => setPaletteOpen(true)}
         />
         <main className="min-h-0 flex-1 overflow-hidden">{children}</main>

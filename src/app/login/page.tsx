@@ -22,7 +22,7 @@ export default async function LoginPage() {
             <span className="flex size-9 items-center justify-center rounded-xl bg-brand-600 text-base font-bold text-white">
               F
             </span>
-            <span className="text-[15px] font-semibold text-ink-900">Fireflies Clone</span>
+            <span className="text-[15px] font-semibold text-ink-900">FireflyX</span>
           </div>
 
           <h1 className="text-2xl font-semibold tracking-tight text-ink-900">

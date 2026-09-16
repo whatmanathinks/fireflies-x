@@ -23,7 +23,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/primitives";
@@ -40,12 +39,14 @@ export function Topbar({
   demoMode,
   liveEnabled,
   blobEnabled,
+  realNotetaker,
   onOpenSearch,
 }: {
   user: SessionUser;
   demoMode: boolean;
   liveEnabled: boolean;
   blobEnabled: boolean;
+  realNotetaker: boolean;
   onOpenSearch: () => void;
 }) {
   const router = useRouter();
@@ -81,7 +82,6 @@ export function Topbar({
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-64">
-          <DropdownMenuLabel>Real capture</DropdownMenuLabel>
           <DropdownMenuItem onSelect={() => setDialog("record")}>
             <Mic />
             <div>
@@ -96,13 +96,13 @@ export function Topbar({
               <div className="text-[11.5px] text-ink-400">Diarized transcription</div>
             </div>
           </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuLabel>Simulated</DropdownMenuLabel>
           <DropdownMenuItem onSelect={() => setDialog("live")}>
             <Video />
             <div>
               <div>Add to live meeting</div>
-              <div className="text-[11.5px] text-ink-400">Notetaker bot (simulated)</div>
+              <div className="text-[11.5px] text-ink-400">
+                {realNotetaker ? "Bot joins Meet, Zoom or Teams" : "Notetaker bot (simulated)"}
+              </div>
             </div>
           </DropdownMenuItem>
         </DropdownMenuContent>

@@ -1,18 +1,28 @@
-# Fireflies Clone
+# FireflyX
 
-A working clone of [Fireflies.ai](https://fireflies.ai) — record a meeting in the browser, get a
-real diarized transcript, AI-generated notes and action items, conversation analytics, and a chat
-assistant grounded in what was actually said.
+A working clone of [Fireflies.ai](https://fireflies.ai) — a bot joins your meeting, records it,
+transcribes it with speaker labels, and writes notes and action items you can search and ask
+questions about.
 
-This is not a mockup. Audio capture, speech-to-text, summarization, search and sharing are all
-real. The one deliberately simulated piece is the meeting-joining **bot**, and it is labelled as
-such in the UI (see [What's real vs. simulated](#whats-real-vs-simulated)).
+**Nothing here is a mockup.** The bot joins real Google Meet / Zoom / Teams calls, the
+transcription is real, and the analysis is real.
+
+```
+Recall.ai  ──▶  Deepgram Nova-3  ──▶  GPT-OSS 120B
+joins the      diarized transcript,    notes, chapters, tasks,
+meeting and    word-level timings      answers that cite the moment
+records it                             (bring your own model)
+```
+
+Repo: <https://github.com/whatmanathinks/fireflies-x>
 
 ---
 
 ## Quick start
 
 ```bash
+git clone https://github.com/whatmanathinks/fireflies-x.git
+cd fireflies-x
 pnpm install
 cp .env.example .env.local        # fill in DATABASE_URL and AUTH_SECRET
 pnpm db:push                      # create the schema

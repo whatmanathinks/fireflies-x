@@ -45,6 +45,7 @@ export function SettingsForm({
     blob: boolean;
     google: boolean;
     webhooks: boolean;
+    notetaker: boolean;
     missing: string[];
   };
 }) {
@@ -131,7 +132,7 @@ export function SettingsForm({
               />
             </Row>
 
-            <Row label="Auto-join rule" hint="Applies to the simulated notetaker">
+            <Row label="Auto-join rule" hint="Applies to the notetaker bot">
               <Select
                 value={form.autoJoinMode}
                 onChange={(v) => save({ autoJoinMode: v })}
@@ -216,6 +217,12 @@ export function SettingsForm({
               label="Google sign-in"
               onText="Enabled"
               offText="Demo login only (set AUTH_GOOGLE_ID / AUTH_GOOGLE_SECRET)"
+            />
+            <Capability
+              on={capabilities.notetaker}
+              label="Notetaker bot"
+              onText="Recall.ai — joins Meet, Zoom and Teams for real"
+              offText="Simulated bot (set RECALL_API_KEY)"
             />
             <Capability
               on={capabilities.webhooks}
