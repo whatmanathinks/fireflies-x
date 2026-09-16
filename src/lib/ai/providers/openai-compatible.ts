@@ -22,6 +22,20 @@ function joinParts(parts: ContentPart[]) {
 const MAX_RETRIES = 3;
 const MAX_WAIT_MS = 35_000;
 
+/**
+ * Per-model output ceilings (Groq's OTPM) are not exposed in headers - they only
+ * surface in the error when you exceed them. Learn them once and respect them after.
+ */
+const outputCaps = new Map<string, number>();
+
+function learnOutputCap(model: string, detail: string) {
+  const match = detail.match(/output tokens per minute \(OTPM\):\s*Limit\s*(\d+)/i);
+  if (!match) return null;
+  const cap = Math.max(256, Number(match[1]) - 64);
+  outputCaps.set(model, cap);
+  return cap;
+}
+
 function retryDelayMs(res: Response, detail: string, attempt: number) {
   const header = res.headers.get("retry-after");
   if (header) {
@@ -54,7 +68,21 @@ async function post(
   let sweep = 0;
 
   for (let attempt = 0; ; attempt++) {
-    payload = { ...payload, model: models[modelIndex] };
+    const model = models[modelIndex];
+    const wanted = Number(body.max_tokens ?? 0);
+    const cap = outputCaps.get(model);
+
+    // A model that cannot produce enough output for this call is skipped, not attempted.
+    if (cap && wanted && cap < wanted * 0.6 && modelIndex < models.length - 1) {
+      modelIndex += 1;
+      continue;
+    }
+
+    payload = {
+      ...payload,
+      model,
+      ...(cap && wanted ? { max_tokens: Math.min(wanted, cap) } : {}),
+    };
     const res = await fetch(endpoint(), {
       method: "POST",
       headers: headers(),
@@ -73,6 +101,13 @@ async function post(
       payload = body;
       continue;
     }
+    const learned = learnOutputCap(models[modelIndex], detail);
+    if (learned !== null) {
+      console.warn(`[llm] ${models[modelIndex]} output cap is ${learned}; retrying within it`);
+      onNotice?.({ message: `Adjusting output size for ${models[modelIndex]}` });
+      continue;
+    }
+
     // One model failing to produce schema-valid JSON is that model's problem,
     // not the request's: rotate rather than failing the whole job.
     if (/json_validate_failed|failed to validate json/i.test(detail)) {
