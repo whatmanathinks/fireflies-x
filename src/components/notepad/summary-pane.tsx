@@ -49,6 +49,8 @@ export function SummaryPane({
   status,
   provider,
   progressNote,
+  failureCode,
+  failureReason,
   onSeekSentence,
 }: {
   meetingId: string;
@@ -56,6 +58,8 @@ export function SummaryPane({
   status: string;
   provider: string;
   progressNote: string | null;
+  failureCode: string | null;
+  failureReason: string | null;
   onSeekSentence: (index: number | null) => void;
 }) {
   const { seek } = usePlayback();
@@ -82,13 +86,28 @@ export function SummaryPane({
     return (
       <div className="flex h-full flex-col items-center justify-center gap-3 px-6 text-center">
         {status === "failed" ? (
-          <>
-            <p className="text-[14px] font-semibold text-ink-800">Notes could not be generated</p>
-            <Button variant="secondary" onClick={() => regenerate("general")}>
-              <RefreshCw />
-              Try again
-            </Button>
-          </>
+          failureCode === "no_speech" ? (
+            <>
+              <p className="text-[14px] font-semibold text-ink-800">Nothing to write notes from</p>
+              <p className="max-w-sm text-[12.5px] leading-relaxed text-ink-500">
+                No speech was found in this audio, so there are no notes to generate. Upload a
+                recording of a conversation and notes will appear here automatically.
+              </p>
+            </>
+          ) : (
+            <>
+              <p className="text-[14px] font-semibold text-ink-800">Notes could not be generated</p>
+              {failureReason && (
+                <p className="max-w-sm text-[12.5px] leading-relaxed text-ink-500">
+                  {failureReason}
+                </p>
+              )}
+              <Button variant="secondary" onClick={() => regenerate("general")}>
+                <RefreshCw />
+                Try again
+              </Button>
+            </>
+          )
         ) : (
           <>
             <Loader2 className="size-5 animate-spin text-brand-500" />

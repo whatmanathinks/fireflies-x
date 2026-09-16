@@ -13,7 +13,7 @@ import { heuristicClassify, heuristicSummary } from "@/lib/ai/fallback";
 import { classifySentences, generateSummary, toAiFilters } from "@/lib/ai/summarize";
 import { computeAnalytics } from "@/lib/analytics";
 import { hasAnthropic } from "@/lib/env";
-import { isPermanent, PermanentError } from "@/lib/errors";
+import { failureCodeOf, isPermanent, PermanentError } from "@/lib/errors";
 
 export type JobStep = "summarize" | "transcribe" | "bot";
 
@@ -167,7 +167,8 @@ export async function summarizeMeeting(
 
   if (rows.length === 0) {
     throw new PermanentError(
-      "There is no transcript to write notes from — no speech was detected in this recording.",
+      "No speech was detected in this audio, so there is nothing to transcribe.",
+      "no_speech",
     );
   }
 

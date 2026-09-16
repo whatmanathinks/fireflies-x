@@ -69,7 +69,8 @@ export async function persistDeepgramResult(
   const parsed = utterancesToSentences(payload);
   if (!parsed.length) {
     throw new PermanentError(
-      "No speech was detected in this recording, so there is nothing to transcribe.",
+      "No speech was detected in this audio, so there is nothing to transcribe.",
+      "no_speech",
     );
   }
 

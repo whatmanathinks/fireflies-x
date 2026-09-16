@@ -208,6 +208,7 @@ export const meetings = pgTable(
     sttRequestId: text("stt_request_id"),
     recallBotId: text("recall_bot_id"),
     failureReason: text("failure_reason"),
+    failureCode: text("failure_code"),
     progressNote: text("progress_note"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),

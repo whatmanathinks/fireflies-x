@@ -23,6 +23,8 @@ export default async function MeetingPage({
       <Notepad
         provider={providerLabel()}
         progressNote={meeting.progressNote}
+        failureCode={meeting.failureCode}
+        failureReason={meeting.failureReason}
         meeting={{
           id: meeting.id,
           title: meeting.title,

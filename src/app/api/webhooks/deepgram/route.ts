@@ -3,6 +3,7 @@ import { after } from "next/server";
 import { db } from "@/db";
 import { meetings } from "@/db/schema";
 import { fail, isInternalRequest, ok } from "@/lib/api";
+import { failureCodeOf, isPermanent } from "@/lib/errors";
 import { enqueue, runDueJobs } from "@/lib/jobs";
 import { persistDeepgramResult } from "@/lib/stt/pipeline";
 import type { DeepgramResponse } from "@/lib/stt/deepgram";
@@ -31,8 +32,16 @@ export async function POST(request: Request) {
     const message = error instanceof Error ? error.message : String(error);
     await db
       .update(meetings)
-      .set({ status: "failed", failureReason: message.slice(0, 500) })
+      .set({
+        status: "failed",
+        failureReason: message.slice(0, 500),
+        failureCode: failureCodeOf(error),
+      })
       .where(eq(meetings.id, meetingId));
+
+    if (isPermanent(error)) {
+      return ok({ received: true, outcome: "permanent_failure", reason: message });
+    }
     return fail(message, 500);
   }
 

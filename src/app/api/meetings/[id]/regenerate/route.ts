@@ -1,7 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { after } from "next/server";
 import { db } from "@/db";
-import { meetings } from "@/db/schema";
+import { meetings, sentences } from "@/db/schema";
 import { handle } from "@/lib/api";
 import { requireSession } from "@/lib/auth";
 import { enqueue, runDueJobs } from "@/lib/jobs";
@@ -21,6 +21,17 @@ export async function POST(
       where: and(eq(meetings.id, id), eq(meetings.workspaceId, session.workspaceId)),
     });
     if (!meeting) throw new Error("Meeting not found");
+
+    const [line] = await db
+      .select({ index: sentences.index })
+      .from(sentences)
+      .where(eq(sentences.meetingId, id))
+      .limit(1);
+    if (!line) {
+      throw new Error(
+        "There is no transcript to write notes from. Upload audio that contains speech.",
+      );
+    }
 
     await enqueue(id, "summarize", { template: body.template ?? "general" });
     after(() => runDueJobs(4));

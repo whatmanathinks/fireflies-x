@@ -1,10 +1,11 @@
 "use client";
 
-import { BarChart3, FileText, Sparkles } from "lucide-react";
+import { AlertTriangle, AudioLines, BarChart3, FileText, Sparkles } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/primitives";
 import type { Chapter } from "@/db/schema";
+import { cn } from "@/lib/utils";
 import { BOT_STATE_LABEL } from "@/lib/labels";
 import { AnalyticsTab, type AnalyticsData } from "./analytics-tab";
 import { AskFredPanel } from "./askfred-panel";
@@ -41,6 +42,8 @@ export function Notepad({
   bookmarks,
   provider,
   progressNote,
+  failureCode,
+  failureReason,
 }: {
   meeting: MeetingHeaderData;
   sentences: TranscriptSentence[];
@@ -52,6 +55,8 @@ export function Notepad({
   bookmarks: BookmarkRow[];
   provider: string;
   progressNote: string | null;
+  failureCode: string | null;
+  failureReason: string | null;
 }) {
   const router = useRouter();
   const params = useSearchParams();
@@ -151,6 +156,8 @@ export function Notepad({
                   status={meeting.status}
                   provider={provider}
                   progressNote={progressNote}
+                  failureCode={failureCode}
+                  failureReason={failureReason}
                   onSeekSentence={(index) => {
                     if (index === null) return;
                     const ms = indexToMs.get(index);
@@ -185,7 +192,12 @@ export function Notepad({
                 jumpTo={jumpTo ?? initialSeek}
               />
             ) : (
-              <TranscriptPending status={meeting.status} botState={meeting.botState} />
+              <TranscriptPending
+                status={meeting.status}
+                botState={meeting.botState}
+                failureCode={failureCode}
+                failureReason={failureReason}
+              />
             )}
           </div>
         </div>
@@ -201,21 +213,44 @@ export function Notepad({
   );
 }
 
-function TranscriptPending({ status, botState }: { status: string; botState: string }) {
-  const label =
-    status === "failed"
-      ? "Transcription failed"
-      : botState !== "idle" && botState !== "done"
-        ? BOT_STATE_LABEL[botState] ?? "Notetaker running…"
-        : status === "transcribing"
-          ? "Transcribing audio…"
-          : status === "recording"
-            ? "Recording in progress…"
-            : "Waiting for audio…";
+function TranscriptPending({
+  status,
+  botState,
+  failureCode,
+  failureReason,
+}: {
+  status: string;
+  botState: string;
+  failureCode: string | null;
+  failureReason: string | null;
+}) {
+  const failed = status === "failed";
+  const noSpeech = failureCode === "no_speech";
+
+  const label = failed
+    ? noSpeech
+      ? "No speech in this audio"
+      : failureCode === "not_admitted"
+        ? "The notetaker wasn't let in"
+        : "Transcription didn't finish"
+    : botState !== "idle" && botState !== "done"
+      ? BOT_STATE_LABEL[botState] ?? "Notetaker running…"
+      : status === "transcribing"
+        ? "Transcribing audio…"
+        : status === "recording"
+          ? "Recording in progress…"
+          : "Waiting for audio…";
+
+  const detail = failed
+    ? noSpeech
+      ? "The file played fine, but there were no spoken words to transcribe — music, silence and ambient audio have nothing to work from. Upload a recording of people talking."
+      : (failureReason ??
+        "Something went wrong on the way to a transcript. Re-uploading the audio usually clears it.")
+    : "This page updates on its own as the transcript comes in.";
 
   return (
     <div className="flex h-full flex-col items-center justify-center gap-3 px-6 text-center">
-      {status !== "failed" && (
+      {!failed && (
         <div className="flex gap-1">
           {[0, 1, 2].map((i) => (
             <span
@@ -226,12 +261,18 @@ function TranscriptPending({ status, botState }: { status: string; botState: str
           ))}
         </div>
       )}
+      {failed && (
+        <span
+          className={cn(
+            "flex size-8 items-center justify-center rounded-full",
+            noSpeech ? "bg-ink-100 text-ink-400" : "bg-amber-50 text-amber-600",
+          )}
+        >
+          {noSpeech ? <AudioLines className="size-4" /> : <AlertTriangle className="size-4" />}
+        </span>
+      )}
       <p className="text-[14px] font-semibold text-ink-800">{label}</p>
-      <p className="max-w-xs text-[12.5px] leading-relaxed text-ink-500">
-        {status === "failed"
-          ? "Check the meeting's job history, or try re-uploading the audio."
-          : "This page updates on its own as the transcript comes in."}
-      </p>
+      <p className="max-w-sm text-[12.5px] leading-relaxed text-ink-500">{detail}</p>
     </div>
   );
 }
