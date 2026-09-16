@@ -44,6 +44,7 @@ which parts are live and which are falling back.
 
 | Screen | What's there |
 |---|---|
+| **/** (landing) | Dark marketing page with a live product shot and a one-click demo entry |
 | **Home** | Quick capture actions, recent meetings, open tasks, AI feed of takeaways |
 | **Meetings** (Notebook) | Channel sidebar, day-grouped list, filters (host, participant, date, duration, source), multi-select with bulk move/delete, ⌘K search |
 | **Notepad** | The main screen — synced player + transcript + notes, detailed below |
