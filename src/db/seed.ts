@@ -14,7 +14,18 @@ import {
   workspaces,
 } from "@/db/schema";
 import { heuristicClassify, heuristicSummary } from "@/lib/ai/fallback";
-import { classifySentences, generateSummary, toAiFilters } from "@/lib/ai/summarize";
+import {
+  classifyChunk,
+  emptyClassified,
+  mergeClassified,
+  planClassify,
+  planSummary,
+  reduceSections,
+  summarizeSection,
+  summarizeWhole,
+  toAiFilters,
+} from "@/lib/ai/summarize";
+import type { ClassifyResult, SummaryResult } from "@/lib/ai/schemas";
 import { computeAnalytics } from "@/lib/analytics";
 import { DEMO_NAME, DEMO_WORKSPACE, TEMPLATE_EMAIL } from "@/lib/constants";
 import { hasAnthropic } from "@/lib/env";
@@ -79,7 +90,14 @@ async function seedMeeting(
     text: s.text,
   }));
 
-  const classified = USE_AI ? await classifySentences(lines) : heuristicClassify(lines);
+  let classified: ClassifyResult;
+  if (USE_AI) {
+    let acc = emptyClassified();
+    for (const chunk of planClassify(lines)) acc = mergeClassified(acc, await classifyChunk(chunk));
+    classified = acc;
+  } else {
+    classified = heuristicClassify(lines);
+  }
   const filters = toAiFilters(classified, built.length);
 
   for (let i = 0; i < built.length; i += 200) {
@@ -99,9 +117,21 @@ async function seedMeeting(
     );
   }
 
-  const summary = USE_AI
-    ? await generateSummary(lines, "general", fixture.title)
-    : heuristicSummary(lines, classified, fixture.title, fixture.meetingType);
+  let summary: SummaryResult;
+  if (USE_AI) {
+    const plan = planSummary(lines);
+    if (plan.fitsInOne) {
+      summary = await summarizeWhole(plan.rendered, "general", fixture.title);
+    } else {
+      const sections = [];
+      for (let i = 0; i < plan.chunks.length; i++) {
+        sections.push(await summarizeSection(plan.chunks[i], i, plan.chunks.length, "general", fixture.title));
+      }
+      summary = await reduceSections(sections, plan.chunks, "general", fixture.title, lines);
+    }
+  } else {
+    summary = heuristicSummary(lines, classified, fixture.title, fixture.meetingType);
+  }
 
   const indexToMs = new Map(built.map((s) => [s.index, s.startMs]));
 

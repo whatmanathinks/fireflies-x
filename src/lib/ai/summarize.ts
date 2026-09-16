@@ -1,5 +1,5 @@
 import { env } from "@/lib/env";
-import { renderTranscript, type TranscriptLine } from "./client";
+import type { TranscriptLine } from "./client";
 import {
   chunkLines,
   chunkTurns,
@@ -9,6 +9,7 @@ import {
   renderIndexed,
   renderTurns,
   timecode,
+  type Turn,
 } from "./chunking";
 import { activeProvider, generateJson } from "./provider";
 import {
@@ -70,135 +71,133 @@ function brevityGuidance() {
 Specific numbers, names and dates still matter more than prose.`;
 }
 
-export type ProgressFn = (note: string | null) => Promise<void> | void;
-
-export async function generateSummary(
-  lines: TranscriptLine[],
-  templateId: string,
-  meetingTitle: string,
-  onProgress?: ProgressFn,
-): Promise<SummaryResult> {
-  const template = templateById(templateId);
+export function planSummary(lines: TranscriptLine[]) {
   const turns = groupIntoTurns(lines);
   const rendered = renderTurns(turns);
-  const budget = inputBudget(env.llmMaxTokens);
+  const fitsInOne = estimateTokens(rendered) <= inputBudget(env.llmMaxTokens);
+  const chunks = fitsInOne ? [turns] : chunkTurns(turns, inputBudget(MAP_OUTPUT_TOKENS));
+  return { turns, rendered, fitsInOne, chunks };
+}
 
-  if (estimateTokens(rendered) <= budget) {
-    return generateJson(
-      summarySchema,
-      "meeting_notes",
-      `${SUMMARY_SYSTEM}\n\nTemplate guidance:\n${template.guidance}${brevityGuidance()}`,
-      [
-        {
-          text: `Meeting title: ${meetingTitle}\n\nTranscript. Each line is "#startIndex mm:ss Speaker: text":\n\n${rendered}`,
-          cache: true,
-        },
-        { text: "Write the meeting notes." },
-      ],
-    );
-  }
+export function planClassify(lines: TranscriptLine[]) {
+  return chunkLines(lines, inputBudget(CLASSIFY_OUTPUT_TOKENS));
+}
 
-  const chunks = chunkTurns(turns, inputBudget(MAP_OUTPUT_TOKENS));
-  const sections: ChunkNotes[] = [];
+export async function summarizeWhole(
+  rendered: string,
+  templateId: string,
+  meetingTitle: string,
+): Promise<SummaryResult> {
+  const template = templateById(templateId);
+  return generateJson(
+    summarySchema,
+    "meeting_notes",
+    `${SUMMARY_SYSTEM}\n\nTemplate guidance:\n${template.guidance}${brevityGuidance()}`,
+    [
+      {
+        text: `Meeting title: ${meetingTitle}\n\nTranscript. Each line is "#startIndex mm:ss Speaker: text":\n\n${rendered}`,
+        cache: true,
+      },
+      { text: "Write the meeting notes." },
+    ],
+  );
+}
 
-  for (let i = 0; i < chunks.length; i++) {
-    await onProgress?.(`Reading section ${i + 1} of ${chunks.length}`);
-    const chunk = chunks[i];
-    const span = `${timecode(chunk[0].startMs)}–${timecode(chunk[chunk.length - 1].startMs)}`;
-    const notes = await generateJson(
-      chunkNotesSchema,
-      "section_notes",
-      `${MAP_SYSTEM}\n\nTemplate guidance:\n${template.guidance}`,
-      [
-        {
-          text: `Meeting: ${meetingTitle}\nSection ${i + 1} of ${chunks.length} (${span})\n\nEach line is "#startIndex mm:ss Speaker: text":\n\n${renderTurns(chunk)}`,
-        },
-        { text: "Summarise this section." },
-      ],
-      MAP_OUTPUT_TOKENS,
-    );
-    sections.push(notes);
-  }
+export async function summarizeSection(
+  chunk: Turn[],
+  index: number,
+  total: number,
+  templateId: string,
+  meetingTitle: string,
+): Promise<ChunkNotes> {
+  const template = templateById(templateId);
+  const span = `${timecode(chunk[0].startMs)}–${timecode(chunk[chunk.length - 1].startMs)}`;
+  return generateJson(
+    chunkNotesSchema,
+    "section_notes",
+    `${MAP_SYSTEM}\n\nTemplate guidance:\n${template.guidance}`,
+    [
+      {
+        text: `Meeting: ${meetingTitle}\nSection ${index + 1} of ${total} (${span})\n\nEach line is "#startIndex mm:ss Speaker: text":\n\n${renderTurns(chunk)}`,
+      },
+      { text: "Summarise this section." },
+    ],
+    MAP_OUTPUT_TOKENS,
+  );
+}
 
-  const digest = sections
+function buildDigest(sections: ChunkNotes[], chunks: Turn[][]) {
+  return sections
     .map((section, i) => {
       const chunk = chunks[i];
-      const span = `${timecode(chunk[0].startMs)}–${timecode(chunk[chunk.length - 1].startMs)}`;
+      const span = chunk
+        ? `${timecode(chunk[0].startMs)}–${timecode(chunk[chunk.length - 1].startMs)}`
+        : `section ${i + 1}`;
       const parts = [
         `### Section ${i + 1} (${span})`,
         section.headline,
         ...section.key_points.map((p) => `- ${p}`),
       ];
-      if (section.chapters.length) {
-        parts.push(
-          ...section.chapters.map(
-            (c) => `chapter: #${c.start_sentence_index} ${c.title} — ${c.summary}`,
-          ),
-        );
+      for (const c of section.chapters) {
+        parts.push(`chapter: #${c.start_sentence_index} ${c.title} — ${c.summary}`);
       }
-      if (section.action_items.length) {
+      for (const a of section.action_items) {
         parts.push(
-          ...section.action_items.map(
-            (a) =>
-              `action: ${a.text} | owner=${a.assignee ?? "-"} | due=${a.due_date ?? "-"} | #${a.sentence_index ?? "-"}`,
-          ),
+          `action: ${a.text} | owner=${a.assignee ?? "-"} | due=${a.due_date ?? "-"} | #${a.sentence_index ?? "-"}`,
         );
       }
       if (section.keywords.length) parts.push(`keywords: ${section.keywords.join(", ")}`);
       return parts.join("\n");
     })
     .join("\n\n");
+}
 
-  await onProgress?.("Merging sections into final notes");
-
+export async function reduceSections(
+  sections: ChunkNotes[],
+  chunks: Turn[][],
+  templateId: string,
+  meetingTitle: string,
+  lines: TranscriptLine[],
+): Promise<SummaryResult> {
+  const template = templateById(templateId);
   return generateJson(
     summarySchema,
     "meeting_notes",
     `${REDUCE_SYSTEM}\n\nTemplate guidance:\n${template.guidance}${brevityGuidance()}`,
     [
       {
-        text: `Meeting title: ${meetingTitle}\nThe meeting ran ${timecode(lines[lines.length - 1]?.startMs ?? 0)} and was read in ${chunks.length} sections.\n\n${digest}`,
+        text: `Meeting title: ${meetingTitle}\nThe meeting ran ${timecode(lines[lines.length - 1]?.startMs ?? 0)} and was read in ${chunks.length} sections.\n\n${buildDigest(sections, chunks)}`,
       },
       { text: "Merge these sections into notes for the whole meeting." },
     ],
   );
 }
 
-export async function classifySentences(
-  lines: TranscriptLine[],
-  onProgress?: ProgressFn,
-): Promise<ClassifyResult> {
-  const budget = inputBudget(CLASSIFY_OUTPUT_TOKENS);
-  const chunks = chunkLines(lines, budget);
-
-  const merged: ClassifyResult = {
-    tasks: [],
-    questions: [],
-    metrics: [],
-    pricing: [],
-    dates: [],
-    positive: [],
-    negative: [],
-  };
-
-  for (let i = 0; i < chunks.length; i++) {
-    const chunk = chunks[i];
-    if (chunks.length > 1) {
-      await onProgress?.(`Labelling transcript, part ${i + 1} of ${chunks.length}`);
-    }
-    const result = await generateJson(classifySchema, "sentence_labels", CLASSIFY_SYSTEM, [
+export async function classifyChunk(chunk: TranscriptLine[]): Promise<ClassifyResult> {
+  return generateJson(
+    classifySchema,
+    "sentence_labels",
+    CLASSIFY_SYSTEM,
+    [
       {
         text: `Transcript excerpt. Lines are "index text", with speaker headers between them:\n\n${renderIndexed(chunk)}`,
       },
       { text: "Label the sentences." },
-    ], CLASSIFY_OUTPUT_TOKENS);
+    ],
+    CLASSIFY_OUTPUT_TOKENS,
+  );
+}
 
-    for (const key of Object.keys(merged) as (keyof ClassifyResult)[]) {
-      merged[key].push(...(result[key] ?? []));
-    }
+export function emptyClassified(): ClassifyResult {
+  return { tasks: [], questions: [], metrics: [], pricing: [], dates: [], positive: [], negative: [] };
+}
+
+export function mergeClassified(into: ClassifyResult, part: ClassifyResult): ClassifyResult {
+  const out = { ...into };
+  for (const key of Object.keys(out) as (keyof ClassifyResult)[]) {
+    out[key] = [...out[key], ...(part[key] ?? [])];
   }
-
-  return merged;
+  return out;
 }
 
 export function toAiFilters(result: ClassifyResult, count: number) {
@@ -224,5 +223,3 @@ export function toAiFilters(result: ClassifyResult, count: number) {
         : ("neutral" as const),
   }));
 }
-
-export { renderTranscript };

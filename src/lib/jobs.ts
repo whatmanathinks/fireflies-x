@@ -10,12 +10,33 @@ import {
   tasks,
 } from "@/db/schema";
 import { heuristicClassify, heuristicSummary } from "@/lib/ai/fallback";
-import { classifySentences, generateSummary, toAiFilters } from "@/lib/ai/summarize";
+import {
+  classifyChunk,
+  emptyClassified,
+  mergeClassified,
+  planClassify,
+  planSummary,
+  reduceSections,
+  summarizeSection,
+  summarizeWhole,
+  toAiFilters,
+} from "@/lib/ai/summarize";
+import type { ChunkNotes, ClassifyResult, SummaryResult } from "@/lib/ai/schemas";
 import { computeAnalytics } from "@/lib/analytics";
 import { env, hasAnthropic } from "@/lib/env";
 import { failureCodeOf, isPermanent, PermanentError } from "@/lib/errors";
 
 export type JobStep = "summarize" | "transcribe" | "bot";
+
+/** Leaves room inside Vercel's 300s ceiling to persist progress and re-queue. */
+const STEP_BUDGET_MS = Number(process.env.JOB_STEP_BUDGET_MS ?? 210_000);
+
+type SummarizeState = {
+  template?: string;
+  classified?: ClassifyResult;
+  classifyDone?: number;
+  sections?: ChunkNotes[];
+};
 
 const MAX_ATTEMPTS = 3;
 const STALE_MS = Number(process.env.JOB_STALE_MS ?? 20 * 60 * 1000);
@@ -169,6 +190,10 @@ export async function summarizeMeeting(
   meetingId: string,
   payload: Record<string, unknown> = {},
 ) {
+  const startedAt = Date.now();
+  const state = payload as SummarizeState;
+  const templateId = typeof state.template === "string" ? state.template : "general";
+
   const meeting = await db.query.meetings.findFirst({ where: eq(meetings.id, meetingId) });
   if (!meeting) throw new Error("Meeting not found");
 
@@ -191,10 +216,7 @@ export async function summarizeMeeting(
     .select()
     .from(speakersTable)
     .where(eq(speakersTable.meetingId, meetingId));
-
-  const nameFor = new Map(
-    speakerRows.map((s) => [s.speakerIndex, s.displayName ?? s.label]),
-  );
+  const nameFor = new Map(speakerRows.map((s) => [s.speakerIndex, s.displayName ?? s.label]));
 
   const lines = rows.map((s) => ({
     index: s.index,
@@ -203,28 +225,80 @@ export async function summarizeMeeting(
     text: s.text,
   }));
 
-  const templateId = typeof payload.template === "string" ? payload.template : "general";
-
   const useAi = hasAnthropic();
-  const progress = (note: string | null) => setProgress(meetingId, note);
+  const outOfTime = () => Date.now() - startedAt > STEP_BUDGET_MS;
 
-  const classified = useAi
-    ? await classifySentences(lines, progress)
-    : heuristicClassify(lines);
+  const park = async (next: SummarizeState, note: string) => {
+    await setProgress(meetingId, note);
+    await enqueue(meetingId, "summarize", next as Record<string, unknown>, 1000);
+  };
+
+  let classified: ClassifyResult;
+
+  if (!useAi) {
+    classified = heuristicClassify(lines);
+  } else {
+    const chunks = planClassify(lines);
+    let acc = state.classified ?? emptyClassified();
+    let done = state.classifyDone ?? 0;
+
+    while (done < chunks.length) {
+      if (chunks.length > 1) {
+        await setProgress(meetingId, `Labelling transcript, part ${done + 1} of ${chunks.length}`);
+      }
+      acc = mergeClassified(acc, await classifyChunk(chunks[done]));
+      done += 1;
+
+      if (done < chunks.length && outOfTime()) {
+        await park(
+          { ...state, template: templateId, classified: acc, classifyDone: done },
+          `Labelling transcript, part ${done} of ${chunks.length}`,
+        );
+        return;
+      }
+    }
+    classified = acc;
+  }
+
   const filters = toAiFilters(classified, rows.length);
-
   for (const row of rows) {
     const next = filters[row.index];
     if (!next) continue;
-    await db
-      .update(sentencesTable)
-      .set({ aiFilters: next })
-      .where(eq(sentencesTable.id, row.id));
+    await db.update(sentencesTable).set({ aiFilters: next }).where(eq(sentencesTable.id, row.id));
   }
 
-  const summary = useAi
-    ? await generateSummary(lines, templateId, meeting.title, progress)
-    : heuristicSummary(lines, classified, meeting.title, "Meeting");
+  let summary: SummaryResult;
+
+  if (!useAi) {
+    summary = heuristicSummary(lines, classified, meeting.title, "Meeting");
+  } else {
+    const plan = planSummary(lines);
+
+    if (plan.fitsInOne) {
+      summary = await summarizeWhole(plan.rendered, templateId, meeting.title);
+    } else {
+      const sections = state.sections ?? [];
+
+      while (sections.length < plan.chunks.length) {
+        const i = sections.length;
+        await setProgress(meetingId, `Reading section ${i + 1} of ${plan.chunks.length}`);
+        sections.push(
+          await summarizeSection(plan.chunks[i], i, plan.chunks.length, templateId, meeting.title),
+        );
+
+        if (sections.length < plan.chunks.length && outOfTime()) {
+          await park(
+            { ...state, template: templateId, classified, classifyDone: undefined, sections },
+            `Read ${sections.length} of ${plan.chunks.length} sections`,
+          );
+          return;
+        }
+      }
+
+      await setProgress(meetingId, "Merging sections into final notes");
+      summary = await reduceSections(sections, plan.chunks, templateId, meeting.title, lines);
+    }
+  }
 
   const indexToMs = new Map(rows.map((s) => [s.index, s.startMs]));
 
@@ -301,6 +375,7 @@ export async function summarizeMeeting(
       isLive: false,
       updatedAt: new Date(),
       failureReason: null,
+      failureCode: null,
       progressNote: null,
     })
     .where(eq(meetings.id, meetingId));
