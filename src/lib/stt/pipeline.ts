@@ -7,6 +7,7 @@ import {
   workspaces,
 } from "@/db/schema";
 import { canReceiveWebhooks, env, hasDeepgram } from "@/lib/env";
+import { PermanentError } from "@/lib/errors";
 import { buildSentences, fixtureDuration } from "@/lib/fixtures/build";
 import { fixtures } from "@/lib/fixtures/transcripts";
 import { enqueue } from "@/lib/jobs";
@@ -21,7 +22,9 @@ import {
 export async function runTranscription(meetingId: string) {
   const meeting = await db.query.meetings.findFirst({ where: eq(meetings.id, meetingId) });
   if (!meeting) throw new Error("Meeting not found");
-  if (!meeting.audioUrl) throw new Error("Meeting has no audio to transcribe");
+  if (!meeting.audioUrl) {
+    throw new PermanentError("This meeting has no audio to transcribe.");
+  }
 
   await db
     .update(meetings)
@@ -64,7 +67,11 @@ export async function persistDeepgramResult(
   payload: DeepgramResponse,
 ) {
   const parsed = utterancesToSentences(payload);
-  if (!parsed.length) throw new Error("Deepgram returned an empty transcript");
+  if (!parsed.length) {
+    throw new PermanentError(
+      "No speech was detected in this recording, so there is nothing to transcribe.",
+    );
+  }
 
   await db.delete(sentencesTable).where(eq(sentencesTable.meetingId, meetingId));
   await db.delete(speakersTable).where(eq(speakersTable.meetingId, meetingId));

@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, Circle, Loader2, Mic, MonitorSpeaker, Square } from "lucide-react";
+import { AlertTriangle, Circle, Info, Loader2, Mic, MonitorSpeaker, Square } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -39,6 +39,7 @@ export function RecordDialog({
   const [interim, setInterim] = useState("");
   const [warning, setWarning] = useState<string | null>(null);
   const [liveActive, setLiveActive] = useState(false);
+  const [live, setLive] = useState<{ ok: boolean; reason: string | null } | null>(null);
 
   const handlesRef = useRef<RecorderHandles | null>(null);
   const clientRef = useRef<DeepgramLiveClient | null>(null);
@@ -59,6 +60,19 @@ export function RecordDialog({
     meetingIdRef.current = null;
     queueRef.current = [];
   }, []);
+
+  useEffect(() => {
+    if (!open || live !== null) return;
+    fetch("/api/capabilities")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) =>
+        setLive({
+          ok: !!d?.liveTranscription,
+          reason: d?.liveTranscriptionReason ?? null,
+        }),
+      )
+      .catch(() => setLive({ ok: false, reason: null }));
+  }, [open, live]);
 
   useEffect(() => {
     if (phase !== "recording") return;
@@ -112,7 +126,7 @@ export function RecordDialog({
       meetingIdRef.current = id;
 
       let client: DeepgramLiveClient | null = null;
-      if (liveEnabled) {
+      if (live?.ok) {
         client = new DeepgramLiveClient({
           sampleRate: 48000,
           onInterim: (text) => setInterim(text),
@@ -120,7 +134,7 @@ export function RecordDialog({
             setLines((prev) => [...prev, sentence]);
             queueRef.current.push(sentence);
           },
-          onError: (message) => setWarning(message),
+          onError: () => setWarning("Live transcript dropped — recording continues."),
         });
       }
 
@@ -134,12 +148,8 @@ export function RecordDialog({
           await client.connect();
           clientRef.current = client;
           setLiveActive(true);
-        } catch (error) {
-          setWarning(
-            error instanceof Error
-              ? `${error.message}. Recording continues — the transcript will be produced after you stop.`
-              : "Live transcription unavailable; recording continues.",
-          );
+        } catch {
+          setLiveActive(false);
         }
       }
 
@@ -262,13 +272,13 @@ export function RecordDialog({
               </p>
             )}
 
-            {!liveEnabled && (
+            {!liveEnabled ? (
               <p className="rounded-lg bg-ink-100 px-3 py-2 text-[12px] leading-relaxed text-ink-600">
                 <b>Demo mode.</b> Audio is really recorded, but with no{" "}
                 <code>DEEPGRAM_API_KEY</code> set the transcript is a scripted sample rather than
                 your words.
               </p>
-            )}
+            ) : null}
 
             <div className="flex justify-end gap-2 pt-1">
               <Button variant="ghost" onClick={() => onOpenChange(false)}>
@@ -298,8 +308,8 @@ export function RecordDialog({
             </div>
 
             {warning && (
-              <p className="flex gap-2 border-b border-line bg-amber-50 px-5 py-2 text-[12px] text-amber-800">
-                <AlertTriangle className="mt-px size-3.5 shrink-0" />
+              <p className="flex gap-2 border-b border-line bg-ink-50 px-5 py-2 text-[12px] text-ink-600">
+                <Info className="mt-px size-3.5 shrink-0 text-ink-400" />
                 {warning}
               </p>
             )}

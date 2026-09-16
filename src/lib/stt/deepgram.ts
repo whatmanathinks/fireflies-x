@@ -42,6 +42,29 @@ function listenParams(keyterms: string[]) {
   return params;
 }
 
+let liveProbe: { ok: boolean; reason: string | null; at: number } | null = null;
+const PROBE_TTL_MS = 5 * 60 * 1000;
+
+export async function canStreamLive(): Promise<{ ok: boolean; reason: string | null }> {
+  if (!env.deepgramApiKey) return { ok: false, reason: "DEEPGRAM_API_KEY is not set" };
+  if (liveProbe && Date.now() - liveProbe.at < PROBE_TTL_MS) {
+    return { ok: liveProbe.ok, reason: liveProbe.reason };
+  }
+
+  try {
+    await grantLiveToken(10);
+    liveProbe = { ok: true, reason: null, at: Date.now() };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    const reason = /FORBIDDEN|Insufficient permissions|403/i.test(message)
+      ? "This Deepgram key cannot mint streaming tokens. Create a key with the Member role (or higher) to enable live transcription."
+      : "Deepgram streaming is unavailable right now.";
+    liveProbe = { ok: false, reason, at: Date.now() };
+  }
+
+  return { ok: liveProbe.ok, reason: liveProbe.reason };
+}
+
 export async function grantLiveToken(ttlSeconds = 60) {
   const res = await fetch(`${DG}/v1/auth/grant`, {
     method: "POST",

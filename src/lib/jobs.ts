@@ -13,6 +13,7 @@ import { heuristicClassify, heuristicSummary } from "@/lib/ai/fallback";
 import { classifySentences, generateSummary, toAiFilters } from "@/lib/ai/summarize";
 import { computeAnalytics } from "@/lib/analytics";
 import { hasAnthropic } from "@/lib/env";
+import { isPermanent, PermanentError } from "@/lib/errors";
 
 export type JobStep = "summarize" | "transcribe" | "bot";
 
@@ -95,7 +96,8 @@ export async function runDueJobs(limit = 3) {
       results.push({ step: job.step, meetingId: job.meetingId, ok: true });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      const exhausted = job.attempts >= MAX_ATTEMPTS;
+      const permanent = isPermanent(error);
+      const exhausted = permanent || job.attempts >= MAX_ATTEMPTS;
       await db
         .update(jobs)
         .set({
@@ -148,7 +150,11 @@ export async function summarizeMeeting(
     .where(eq(sentencesTable.meetingId, meetingId))
     .orderBy(asc(sentencesTable.index));
 
-  if (rows.length === 0) throw new Error("No transcript to summarize");
+  if (rows.length === 0) {
+    throw new PermanentError(
+      "There is no transcript to write notes from — no speech was detected in this recording.",
+    );
+  }
 
   await db.update(meetings).set({ status: "summarizing" }).where(eq(meetings.id, meetingId));
 
