@@ -1,4 +1,5 @@
 import { env } from "@/lib/env";
+import { QuotaExhaustedError } from "@/lib/errors";
 import { modelCandidates, type ChatMessage, type ContentPart, type NoticeFn } from "../provider";
 
 type ChatCompletionChoice = { message?: { content?: string }; delta?: { content?: string } };
@@ -101,6 +102,17 @@ async function post(
       payload = body;
       continue;
     }
+    // A per-day quota does not recover in seconds; retrying and rotating is pointless
+    // and produces a misleading error. Say what actually happened.
+    if (/tokens per day \(TPD\)/i.test(detail)) {
+      const used = detail.match(/Limit\s*(\d+),\s*Used\s*(\d+)/i);
+      const quota = used ? ` (${used[2]} of ${used[1]} used)` : "";
+      throw new QuotaExhaustedError(
+        `The daily token quota for ${models[modelIndex]} is exhausted${quota}. ` +
+          `It resets at 00:00 UTC. Add ANTHROPIC_API_KEY, or set LLM_API_KEY to a key with remaining quota, to continue now.`,
+      );
+    }
+
     const learned = learnOutputCap(models[modelIndex], detail);
     if (learned !== null) {
       console.warn(`[llm] ${models[modelIndex]} output cap is ${learned}; retrying within it`);
@@ -120,7 +132,8 @@ async function post(
       }
       throw new Error(
         `No configured model produced valid JSON for this request (last tried ${current}). ` +
-          `Raise LLM_MAX_TOKENS so the model has room to finish, or use a stronger model.`,
+          `Raise LLM_MAX_TOKENS so the model has room to finish, or use a stronger model. ` +
+          `Provider said: ${detail.slice(0, 200)}`,
       );
     }
 

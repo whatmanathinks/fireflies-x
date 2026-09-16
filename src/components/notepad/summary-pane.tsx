@@ -86,7 +86,19 @@ export function SummaryPane({
     return (
       <div className="flex h-full flex-col items-center justify-center gap-3 px-6 text-center">
         {status === "failed" ? (
-          failureCode === "no_speech" ? (
+          failureCode === "quota" ? (
+            <>
+              <p className="text-[14px] font-semibold text-ink-800">Daily model quota reached</p>
+              <p className="max-w-sm text-[12.5px] leading-relaxed text-ink-500">
+                {failureReason ??
+                  "The language model provider's daily token limit is used up. It resets at 00:00 UTC."}
+              </p>
+              <Button variant="secondary" onClick={() => regenerate("general")}>
+                <RefreshCw />
+                Try again
+              </Button>
+            </>
+          ) : failureCode === "no_speech" ? (
             <>
               <p className="text-[14px] font-semibold text-ink-800">Nothing to write notes from</p>
               <p className="max-w-sm text-[12.5px] leading-relaxed text-ink-500">
