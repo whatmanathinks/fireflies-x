@@ -5,6 +5,9 @@ export type ProviderId = "anthropic" | "openai-compatible" | "none";
 
 export type ContentPart = { text: string; cache?: boolean };
 
+/** Reports transient trouble (rate limits, model switches) so the UI can explain the wait. */
+export type NoticeFn = (notice: { message: string; retryInMs?: number }) => void;
+
 export type ChatMessage = { role: "user" | "assistant"; content: string };
 
 export function activeProvider(): ProviderId {
@@ -19,6 +22,10 @@ export function providerLabel() {
   if (provider === "anthropic") return `Anthropic ${env.anthropicModel}`;
   if (provider === "openai-compatible") return env.llmModel;
   return "Scripted (no LLM key)";
+}
+
+export function modelCandidates() {
+  return [env.llmModel, ...env.llmFallbackModels].filter(Boolean);
 }
 
 export function hasLlm() {
@@ -37,6 +44,7 @@ export async function generateJson<T>(
   system: string,
   parts: ContentPart[],
   maxTokens?: number,
+  onNotice?: NoticeFn,
 ): Promise<T> {
   const provider = activeProvider();
 
@@ -47,7 +55,13 @@ export async function generateJson<T>(
 
   if (provider === "openai-compatible") {
     const { openAiJson } = await import("./providers/openai-compatible");
-    const raw = await openAiJson(jsonSchemaFor(schema, schemaName), system, parts, maxTokens);
+    const raw = await openAiJson(
+      jsonSchemaFor(schema, schemaName),
+      system,
+      parts,
+      maxTokens,
+      onNotice,
+    );
     return schema.parse(raw);
   }
 

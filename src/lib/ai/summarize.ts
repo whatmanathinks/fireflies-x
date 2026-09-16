@@ -11,7 +11,7 @@ import {
   timecode,
   type Turn,
 } from "./chunking";
-import { activeProvider, generateJson } from "./provider";
+import { activeProvider, generateJson, type NoticeFn } from "./provider";
 import {
   chunkNotesSchema,
   classifySchema,
@@ -87,6 +87,7 @@ export async function summarizeWhole(
   rendered: string,
   templateId: string,
   meetingTitle: string,
+  onNotice?: NoticeFn,
 ): Promise<SummaryResult> {
   const template = templateById(templateId);
   return generateJson(
@@ -100,6 +101,8 @@ export async function summarizeWhole(
       },
       { text: "Write the meeting notes." },
     ],
+    undefined,
+    onNotice,
   );
 }
 
@@ -109,6 +112,7 @@ export async function summarizeSection(
   total: number,
   templateId: string,
   meetingTitle: string,
+  onNotice?: NoticeFn,
 ): Promise<ChunkNotes> {
   const template = templateById(templateId);
   const span = `${timecode(chunk[0].startMs)}–${timecode(chunk[chunk.length - 1].startMs)}`;
@@ -123,6 +127,7 @@ export async function summarizeSection(
       { text: "Summarise this section." },
     ],
     MAP_OUTPUT_TOKENS,
+    onNotice,
   );
 }
 
@@ -158,6 +163,7 @@ export async function reduceSections(
   templateId: string,
   meetingTitle: string,
   lines: TranscriptLine[],
+  onNotice?: NoticeFn,
 ): Promise<SummaryResult> {
   const template = templateById(templateId);
   return generateJson(
@@ -170,10 +176,15 @@ export async function reduceSections(
       },
       { text: "Merge these sections into notes for the whole meeting." },
     ],
+    undefined,
+    onNotice,
   );
 }
 
-export async function classifyChunk(chunk: TranscriptLine[]): Promise<ClassifyResult> {
+export async function classifyChunk(
+  chunk: TranscriptLine[],
+  onNotice?: NoticeFn,
+): Promise<ClassifyResult> {
   return generateJson(
     classifySchema,
     "sentence_labels",
@@ -185,6 +196,7 @@ export async function classifyChunk(chunk: TranscriptLine[]): Promise<ClassifyRe
       { text: "Label the sentences." },
     ],
     CLASSIFY_OUTPUT_TOKENS,
+    onNotice,
   );
 }
 

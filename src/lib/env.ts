@@ -14,6 +14,10 @@ export const env = {
   llmMaxTokens: Number(process.env.LLM_MAX_TOKENS ?? 3500),
   llmReasoningEffort: process.env.LLM_REASONING_EFFORT ?? "low",
   llmTpmBudget: Number(process.env.LLM_TPM_BUDGET ?? 8000),
+  llmFallbackModels: (process.env.LLM_FALLBACK_MODELS ?? "")
+    .split(",")
+    .map((m) => m.trim())
+    .filter(Boolean),
   blobToken: process.env.BLOB_READ_WRITE_TOKEN ?? "",
   blobStoreId: process.env.BLOB_STORE_ID ?? "",
   recallApiKey: process.env.RECALL_API_KEY ?? "",

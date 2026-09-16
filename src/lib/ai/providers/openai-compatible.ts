@@ -1,5 +1,5 @@
 import { env } from "@/lib/env";
-import type { ChatMessage, ContentPart } from "../provider";
+import { modelCandidates, type ChatMessage, type ContentPart, type NoticeFn } from "../provider";
 
 type ChatCompletionChoice = { message?: { content?: string }; delta?: { content?: string } };
 type ChatCompletion = { choices?: ChatCompletionChoice[]; error?: { message?: string } };
@@ -19,8 +19,8 @@ function joinParts(parts: ContentPart[]) {
   return parts.map((p) => p.text).join("\n\n");
 }
 
-const MAX_RETRIES = 4;
-const MAX_WAIT_MS = 65_000;
+const MAX_RETRIES = 3;
+const MAX_WAIT_MS = 35_000;
 
 function retryDelayMs(res: Response, detail: string, attempt: number) {
   const header = res.headers.get("retry-after");
@@ -39,10 +39,22 @@ function withReasoning(body: Record<string, unknown>) {
   return { ...body, reasoning_effort: effort };
 }
 
-async function post(body: Record<string, unknown>, allowReasoning = true) {
+/**
+ * Rate limits on Groq are per-model, so an exhausted model is worked around by
+ * switching rather than waiting. Only when every candidate is limited do we back off.
+ */
+async function post(
+  body: Record<string, unknown>,
+  allowReasoning = true,
+  onNotice?: NoticeFn,
+) {
+  const models = modelCandidates();
   let payload = allowReasoning ? withReasoning(body) : body;
+  let modelIndex = 0;
+  let sweep = 0;
 
   for (let attempt = 0; ; attempt++) {
+    payload = { ...payload, model: models[modelIndex] };
     const res = await fetch(endpoint(), {
       method: "POST",
       headers: headers(),
@@ -71,16 +83,36 @@ async function post(body: Record<string, unknown>, allowReasoning = true) {
 
     const retryable = res.status === 429 || res.status >= 500;
 
-    if (retryable && attempt < MAX_RETRIES) {
-      const wait = retryDelayMs(res, detail, attempt);
-      console.warn(
-        `[llm] ${env.llmModel} ${res.status}; retrying in ${Math.round(wait / 1000)}s (attempt ${attempt + 1}/${MAX_RETRIES})`,
-      );
-      await new Promise((resolve) => setTimeout(resolve, wait));
-      continue;
+    if (retryable) {
+      const current = models[modelIndex];
+
+      if (modelIndex < models.length - 1) {
+        modelIndex += 1;
+        console.warn(`[llm] ${current} ${res.status}; switching to ${models[modelIndex]}`);
+        onNotice?.({ message: `Switching to ${models[modelIndex]}` });
+        continue;
+      }
+
+      if (sweep < MAX_RETRIES) {
+        const wait = retryDelayMs(res, detail, sweep);
+        sweep += 1;
+        modelIndex = 0;
+        console.warn(
+          `[llm] all ${models.length} model(s) limited; waiting ${Math.round(wait / 1000)}s (sweep ${sweep}/${MAX_RETRIES})`,
+        );
+        onNotice?.({
+          message:
+            models.length > 1
+              ? `All ${models.length} models are rate limited`
+              : "Rate limited by the model provider",
+          retryInMs: wait,
+        });
+        await new Promise((resolve) => setTimeout(resolve, wait));
+        continue;
+      }
     }
 
-    throw new Error(`${env.llmModel} request failed (${res.status}): ${detail.slice(0, 400)}`);
+    throw new Error(`${models[modelIndex]} request failed (${res.status}): ${detail.slice(0, 400)}`);
   }
 }
 
@@ -89,6 +121,7 @@ export async function openAiJson(
   system: string,
   parts: ContentPart[],
   maxTokens?: number,
+  onNotice?: NoticeFn,
 ): Promise<unknown> {
   const messages = [
     { role: "system", content: system },
@@ -96,13 +129,17 @@ export async function openAiJson(
   ];
 
   const attempt = async (responseFormat: Record<string, unknown>) => {
-    const res = await post({
-      model: env.llmModel,
-      messages,
-      max_tokens: maxTokens ?? env.llmMaxTokens,
-      temperature: 0.3,
-      response_format: responseFormat,
-    });
+    const res = await post(
+      {
+        model: env.llmModel,
+        messages,
+        max_tokens: maxTokens ?? env.llmMaxTokens,
+        temperature: 0.3,
+        response_format: responseFormat,
+      },
+      true,
+      onNotice,
+    );
     const data = (await res.json()) as ChatCompletion;
     const content = data.choices?.[0]?.message?.content;
     if (!content) throw new Error("Model returned an empty response");

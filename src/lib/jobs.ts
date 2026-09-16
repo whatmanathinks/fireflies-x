@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray, lt, lte, or, sql } from "drizzle-orm";
+import { and, asc, eq, gt, inArray, lt, lte, ne, or, sql } from "drizzle-orm";
 import { db } from "@/db";
 import {
   jobs,
@@ -81,8 +81,27 @@ export async function enqueue(
     });
 }
 
+/** Summarize competes for one shared tokens-per-minute budget, so run at most one at a time. */
+async function summarizeInFlight() {
+  const staleBefore = new Date(Date.now() - STALE_MS);
+  const [row] = await db
+    .select({ id: jobs.id })
+    .from(jobs)
+    .where(
+      and(
+        eq(jobs.step, "summarize"),
+        eq(jobs.status, "running"),
+        gt(jobs.startedAt, staleBefore),
+      ),
+    )
+    .limit(1);
+  return !!row;
+}
+
 async function claimJobs(limit: number) {
   const staleBefore = new Date(Date.now() - STALE_MS);
+  const exclusiveBusy = await summarizeInFlight();
+
   const rows = await db
     .select({ id: jobs.id })
     .from(jobs)
@@ -94,6 +113,7 @@ async function claimJobs(limit: number) {
           and(eq(jobs.status, "running"), lt(jobs.startedAt, staleBefore)),
         ),
         lt(jobs.attempts, MAX_ATTEMPTS),
+        ...(exclusiveBusy ? [ne(jobs.step, "summarize")] : []),
       ),
     )
     .orderBy(asc(jobs.runAfter))
@@ -228,6 +248,18 @@ export async function summarizeMeeting(
   const useAi = hasAnthropic();
   const outOfTime = () => Date.now() - startedAt > STEP_BUDGET_MS;
 
+  let stage = "Writing your notes";
+  const setStage = async (next: string) => {
+    stage = next;
+    await setProgress(meetingId, next);
+  };
+  const notice = (n: { message: string; retryInMs?: number }) => {
+    const suffix = n.retryInMs
+      ? ` — retrying in ${Math.max(1, Math.round(n.retryInMs / 1000))}s`
+      : "";
+    void setProgress(meetingId, `${stage} · ${n.message}${suffix}`);
+  };
+
   const park = async (next: SummarizeState, note: string) => {
     await setProgress(meetingId, note);
     await enqueue(meetingId, "summarize", next as Record<string, unknown>, 1000);
@@ -244,9 +276,9 @@ export async function summarizeMeeting(
 
     while (done < chunks.length) {
       if (chunks.length > 1) {
-        await setProgress(meetingId, `Labelling transcript, part ${done + 1} of ${chunks.length}`);
+        await setStage(`Labelling transcript, part ${done + 1} of ${chunks.length}`);
       }
-      acc = mergeClassified(acc, await classifyChunk(chunks[done]));
+      acc = mergeClassified(acc, await classifyChunk(chunks[done], notice));
       done += 1;
 
       if (done < chunks.length && outOfTime()) {
@@ -275,15 +307,18 @@ export async function summarizeMeeting(
     const plan = planSummary(lines);
 
     if (plan.fitsInOne) {
-      summary = await summarizeWhole(plan.rendered, templateId, meeting.title);
+      await setStage("Writing your notes");
+      summary = await summarizeWhole(plan.rendered, templateId, meeting.title, notice);
     } else {
       const sections = state.sections ?? [];
 
       while (sections.length < plan.chunks.length) {
         const i = sections.length;
-        await setProgress(meetingId, `Reading section ${i + 1} of ${plan.chunks.length}`);
+        await setStage(`Reading section ${i + 1} of ${plan.chunks.length}`);
         sections.push(
-          await summarizeSection(plan.chunks[i], i, plan.chunks.length, templateId, meeting.title),
+          await summarizeSection(
+            plan.chunks[i], i, plan.chunks.length, templateId, meeting.title, notice,
+          ),
         );
 
         if (sections.length < plan.chunks.length && outOfTime()) {
@@ -295,8 +330,10 @@ export async function summarizeMeeting(
         }
       }
 
-      await setProgress(meetingId, "Merging sections into final notes");
-      summary = await reduceSections(sections, plan.chunks, templateId, meeting.title, lines);
+      await setStage("Merging sections into final notes");
+      summary = await reduceSections(
+        sections, plan.chunks, templateId, meeting.title, lines, notice,
+      );
     }
   }
 
