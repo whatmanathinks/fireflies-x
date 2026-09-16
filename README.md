@@ -339,6 +339,26 @@ The e2e scripts drive a real browser against `pnpm dev`, so start the dev server
 
 ---
 
+## Time spent
+
+Measured from commit timestamps, counting only time inside working blocks.
+
+| Phase | When | Commits | Hours |
+|---|---|---|---|
+| Build | Tue 17:43 – 20:40 | 5 | 3.0 |
+| Deploy & harden | Wed 12:21 – 17:09 | 27 | 4.8 |
+| Live testing | throughout | — | ~2.0 |
+| **Total** | | **32** | **~9.8** |
+
+The first working version — schema, auth, notepad, every screen, the job pipeline — took **42
+minutes**, from the scaffold commit to the one that landed the whole app. The remaining ~7 hours
+went on everything after.
+
+**20 of the 32 commits are bug fixes**, and nearly all address something that cannot happen
+locally: a serverless function ceiling, a UTC server against a local browser, a storage product
+that changed how it authenticates, three provider limits sharing one status code. The build was
+the short part; surviving real infrastructure was the work.
+
 ## Assumptions
 
 - **One workspace per user.** No billing, seats, or AI-credit metering.
