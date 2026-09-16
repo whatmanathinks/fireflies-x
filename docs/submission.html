@@ -1,0 +1,542 @@
+<title>FireflyX Build Notes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+
+<style>
+  :root {
+    --ground: #fbfaf8;
+    --surface: #ffffff;
+    --sunken: #f4f3f0;
+    --ink: #16181d;
+    --ink-soft: #454a55;
+    --ink-mute: #6f7583;
+    --line: #e3e1dc;
+    --line-soft: #eeece8;
+    --accent: #4338ca;
+    --accent-soft: #eceafb;
+    --ok: #17724b;
+    --ok-soft: #e2f0e9;
+    --warn: #8a5a10;
+    --warn-soft: #f7edda;
+    --cost: #9a3a3a;
+    --cost-soft: #f7e6e4;
+
+    --f-display: "Fraunces", Georgia, "Times New Roman", serif;
+    --f-body: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    --f-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #101216;
+      --surface: #171a20;
+      --sunken: #1d2128;
+      --ink: #f2f1ee;
+      --ink-soft: #c3c6cd;
+      --ink-mute: #8c93a0;
+      --line: #2a2f38;
+      --line-soft: #232831;
+      --accent: #a6a0f5;
+      --accent-soft: #232043;
+      --ok: #6fd3a3;
+      --ok-soft: #13291f;
+      --warn: #e2b768;
+      --warn-soft: #2c2415;
+      --cost: #e89b95;
+      --cost-soft: #2e1e1d;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --ground: #101216;
+    --surface: #171a20;
+    --sunken: #1d2128;
+    --ink: #f2f1ee;
+    --ink-soft: #c3c6cd;
+    --ink-mute: #8c93a0;
+    --line: #2a2f38;
+    --line-soft: #232831;
+    --accent: #a6a0f5;
+    --accent-soft: #232043;
+    --ok: #6fd3a3;
+    --ok-soft: #13291f;
+    --warn: #e2b768;
+    --warn-soft: #2c2415;
+    --cost: #e89b95;
+    --cost-soft: #2e1e1d;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--f-body);
+    font-size: 16px;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap { max-width: 860px; margin: 0 auto; padding: 0 28px 96px; }
+
+  a { color: var(--accent); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+  a:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 2px; }
+
+  /* ---------- masthead ---------- */
+  .masthead { border-bottom: 1px solid var(--line); padding: 56px 0 28px; }
+  .eyebrow {
+    font-family: var(--f-mono);
+    font-size: 11.5px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-mute);
+  }
+  h1 {
+    font-family: var(--f-display);
+    font-weight: 600;
+    font-size: clamp(38px, 6vw, 56px);
+    line-height: 1.02;
+    letter-spacing: -0.02em;
+    margin: 14px 0 0;
+    text-wrap: balance;
+  }
+  .standfirst {
+    font-size: 18px;
+    line-height: 1.6;
+    color: var(--ink-soft);
+    max-width: 62ch;
+    margin: 16px 0 0;
+  }
+  .links { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 24px; }
+  .link-chip {
+    display: inline-flex; align-items: center; gap: 8px;
+    border: 1px solid var(--line); background: var(--surface);
+    border-radius: 7px; padding: 7px 12px;
+    font-family: var(--f-mono); font-size: 12.5px;
+    color: var(--ink-soft); text-decoration: none;
+  }
+  .link-chip:hover { border-color: var(--accent); color: var(--accent); }
+  .link-chip b { color: var(--ink); font-weight: 500; }
+
+  /* ---------- facts strip ---------- */
+  .facts {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(128px, 1fr));
+    gap: 0; border-bottom: 1px solid var(--line);
+  }
+  .fact { padding: 20px 0; }
+  .fact dt {
+    font-family: var(--f-mono); font-size: 11px; letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--ink-mute);
+  }
+  .fact dd {
+    margin: 5px 0 0; font-size: 21px; font-weight: 600;
+    font-variant-numeric: tabular-nums; letter-spacing: -0.01em;
+  }
+  .fact dd span { font-size: 13px; font-weight: 400; color: var(--ink-mute); }
+
+  /* ---------- sections ---------- */
+  section { padding-top: 52px; }
+  h2 {
+    font-family: var(--f-display); font-weight: 600;
+    font-size: 27px; letter-spacing: -0.015em; line-height: 1.2;
+    margin: 0 0 6px; text-wrap: balance;
+  }
+  .sub { color: var(--ink-mute); font-size: 14.5px; margin: 0 0 22px; max-width: 64ch; }
+  p { max-width: 68ch; margin: 0 0 15px; }
+  h3 {
+    font-family: var(--f-body); font-size: 15.5px; font-weight: 600;
+    margin: 28px 0 7px; letter-spacing: -0.005em;
+  }
+  code {
+    font-family: var(--f-mono); font-size: 0.875em;
+    background: var(--sunken); border: 1px solid var(--line-soft);
+    padding: 1px 5px; border-radius: 4px;
+  }
+
+  /* ---------- pipeline ---------- */
+  .pipeline { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); }
+  .stage {
+    border: 1px solid var(--line); background: var(--surface);
+    border-radius: 9px; padding: 16px 16px 18px;
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  .stage-n {
+    font-family: var(--f-display); font-size: 13px; font-weight: 600;
+    color: var(--accent); font-variant-numeric: tabular-nums;
+  }
+  .stage-vendor { font-family: var(--f-mono); font-size: 12.5px; color: var(--ink); font-weight: 500; }
+  .stage-what { font-size: 13.5px; color: var(--ink-soft); line-height: 1.5; }
+
+  /* ---------- tables ---------- */
+  .scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 9px; background: var(--surface); }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th {
+    text-align: left; font-family: var(--f-mono); font-weight: 500;
+    font-size: 11px; letter-spacing: 0.09em; text-transform: uppercase;
+    color: var(--ink-mute); padding: 11px 14px;
+    border-bottom: 1px solid var(--line); background: var(--sunken);
+    white-space: nowrap;
+  }
+  td { padding: 12px 14px; border-bottom: 1px solid var(--line-soft); vertical-align: top; color: var(--ink-soft); }
+  tr:last-child td { border-bottom: none; }
+  td.name { color: var(--ink); font-weight: 500; white-space: nowrap; }
+  td.mono { font-family: var(--f-mono); font-size: 12.5px; font-variant-numeric: tabular-nums; }
+
+  .pill {
+    display: inline-block; font-family: var(--f-mono); font-size: 11px;
+    letter-spacing: 0.03em; padding: 3px 8px; border-radius: 5px; white-space: nowrap;
+  }
+  .pill.free { background: var(--ok-soft); color: var(--ok); }
+  .pill.trial { background: var(--warn-soft); color: var(--warn); }
+  .pill.paid { background: var(--cost-soft); color: var(--cost); }
+
+  /* ---------- findings ---------- */
+  .finding {
+    border-left: 2px solid var(--line); padding: 2px 0 2px 18px;
+    margin: 0 0 22px;
+  }
+  .finding.fixed { border-left-color: var(--accent); }
+  .finding-h { font-weight: 600; font-size: 15px; color: var(--ink); margin: 0 0 4px; }
+  .finding p { margin: 0 0 8px; font-size: 14.5px; }
+  .finding .tag {
+    font-family: var(--f-mono); font-size: 10.5px; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--ink-mute); display: block; margin-bottom: 3px;
+  }
+
+  ul { margin: 0 0 15px; padding-left: 20px; max-width: 68ch; }
+  li { margin-bottom: 7px; color: var(--ink-soft); }
+  li strong { color: var(--ink); font-weight: 600; }
+
+  .note {
+    background: var(--sunken); border: 1px solid var(--line-soft);
+    border-radius: 8px; padding: 14px 16px; font-size: 14px;
+    color: var(--ink-soft); max-width: 68ch;
+  }
+  .note strong { color: var(--ink); }
+
+  pre {
+    font-family: var(--f-mono); font-size: 12.5px; line-height: 1.7;
+    background: var(--sunken); border: 1px solid var(--line-soft);
+    border-radius: 8px; padding: 14px 16px; overflow-x: auto; margin: 0 0 15px;
+    color: var(--ink-soft);
+  }
+
+  footer {
+    margin-top: 60px; padding-top: 22px; border-top: 1px solid var(--line);
+    font-size: 13px; color: var(--ink-mute);
+  }
+
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+
+<div class="wrap">
+
+  <header class="masthead">
+    <div class="eyebrow">Engineering challenge submission · Manas Goel</div>
+    <h1>FireflyX</h1>
+    <p class="standfirst">
+      A working Fireflies.ai clone. A bot joins your Google Meet, Zoom or Teams call, records it,
+      transcribes it with speaker labels, and writes notes you can search and interrogate.
+      Nothing in it is a mockup.
+    </p>
+    <div class="links">
+      <a class="link-chip" href="https://github.com/whatmanathinks/fireflies-x"><b>Repository</b> github.com/whatmanathinks/fireflies-x</a>
+      <a class="link-chip" href="https://github.com/whatmanathinks/fireflies-x#quick-start"><b>Setup</b> README</a>
+    </div>
+  </header>
+
+  <dl class="facts">
+    <div class="fact"><dt>Source</dt><dd>14.2k <span>lines TS</span></dd></div>
+    <div class="fact"><dt>API routes</dt><dd>30</dd></div>
+    <div class="fact"><dt>DB tables</dt><dd>22</dd></div>
+    <div class="fact"><dt>Screens</dt><dd>11</dd></div>
+    <div class="fact"><dt>Elapsed</dt><dd>~20 <span>hours</span></dd></div>
+  </dl>
+
+  <section>
+    <h2>What it does</h2>
+    <p class="sub">Every capability below is live — not stubbed, not faked.</p>
+    <ul>
+      <li><strong>Three capture paths.</strong> A real notetaker bot dials into a call; or record the browser tab plus your mic; or upload an existing file.</li>
+      <li><strong>Diarized transcripts</strong> with word-level timings, so every sentence is clickable and seeks the player to that moment.</li>
+      <li><strong>AI notes</strong> — overview, chapters, action items with owners and due dates, plus per-sentence labels powering filters for tasks, questions, metrics, pricing and dates.</li>
+      <li><strong>AskFred</strong>, per-meeting and workspace-wide, streaming, citing timestamps you can click.</li>
+      <li><strong>Conversation analytics</strong> — talk time, words per minute, filler words, longest monologue, sentiment. Computed from word timings in TypeScript, not estimated by a model.</li>
+      <li><strong>The rest of the product</strong> — channels, full-text search, tasks, soundbites, comments, bookmarks, public share links, exports, settings.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>How it works</h2>
+    <p class="sub">Three services, one pipeline. Each stage hands the next a plain artifact — a URL, then sentences, then notes — so any one of them can be swapped without touching the others.</p>
+    <div class="pipeline">
+      <div class="stage">
+        <div class="stage-n">01</div>
+        <div class="stage-vendor">Recall.ai</div>
+        <div class="stage-what">A bot joins the meeting as a participant, waits for admission, records, and returns an MP3.</div>
+      </div>
+      <div class="stage">
+        <div class="stage-n">02</div>
+        <div class="stage-vendor">Deepgram Nova-3</div>
+        <div class="stage-what">Audio becomes a diarized transcript with per-word timestamps and speaker turns.</div>
+      </div>
+      <div class="stage">
+        <div class="stage-n">03</div>
+        <div class="stage-vendor">GPT-OSS 120B</div>
+        <div class="stage-what">The transcript becomes notes, chapters, tasks and answers. Any OpenAI-compatible model works.</div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>External tools &amp; what they cost</h2>
+    <p class="sub">Everything the app talks to, and what it costs to run. The whole stack runs on free tiers today.</p>
+    <div class="scroll">
+      <table>
+        <thead>
+          <tr><th>Service</th><th>Used for</th><th>Cost</th><th>What we're on</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="name">Recall.ai</td><td>Meeting bots for Meet, Zoom, Teams</td>
+            <td class="mono">$0.50 / hr recorded</td>
+            <td><span class="pill trial">Free trial</span> first 5 hours free</td>
+          </tr>
+          <tr>
+            <td class="name">Deepgram</td><td>Speech-to-text, diarization, word timings</td>
+            <td class="mono">≈ $0.41 / hr with diarization</td>
+            <td><span class="pill trial">Free credit</span> $200 on signup</td>
+          </tr>
+          <tr>
+            <td class="name">Groq</td><td>Notes, sentence labels, AskFred (<code>gpt-oss-120b</code>)</td>
+            <td class="mono">$0 — 8k tokens/min</td>
+            <td><span class="pill free">Free tier</span> no card required</td>
+          </tr>
+          <tr>
+            <td class="name">Anthropic</td><td>Optional higher-quality notes and citations</td>
+            <td class="mono">$5 / $25 per MTok</td>
+            <td><span class="pill paid">Paid</span> supported, not enabled</td>
+          </tr>
+          <tr>
+            <td class="name">Neon</td><td>Postgres in production</td>
+            <td class="mono">$0 up to 0.5 GB</td>
+            <td><span class="pill free">Free tier</span> deploy target</td>
+          </tr>
+          <tr>
+            <td class="name">Vercel</td><td>Hosting, cron, functions</td>
+            <td class="mono">$0 on Hobby</td>
+            <td><span class="pill free">Free tier</span> deploy target</td>
+          </tr>
+          <tr>
+            <td class="name">Vercel Blob</td><td>Audio storage in production</td>
+            <td class="mono">Included in Hobby allotment</td>
+            <td><span class="pill free">Free tier</span> falls back to local disk</td>
+          </tr>
+          <tr>
+            <td class="name">Google OAuth</td><td>Sign-in</td>
+            <td class="mono">Free</td>
+            <td><span class="pill free">Free</span> supported, not configured</td>
+          </tr>
+          <tr>
+            <td class="name">Claude Code</td><td>Writing the application</td>
+            <td class="mono">Subscription</td>
+            <td><span class="pill paid">Paid</span> build tool, not a dependency</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Libraries</h3>
+    <p>
+      Next.js 16 (App Router, React 19) · Drizzle ORM · Auth.js v5 · Tailwind v4 · Radix UI ·
+      wavesurfer.js · lucide · cmdk · sonner · Zod · postgres.js · Playwright for end-to-end tests.
+      32 runtime dependencies, 12 dev.
+    </p>
+
+    <div class="note">
+      <strong>Every vendor degrades instead of failing.</strong> With only <code>DATABASE_URL</code> and
+      <code>AUTH_SECRET</code> set, the app still runs end to end: recording really captures audio,
+      but transcripts come from a bundled script and notes from a keyword summarizer. Settings → Service
+      status shows exactly which parts are live. A missing key never produces a broken screen.
+    </div>
+  </section>
+
+  <section>
+    <h2>Decisions worth explaining</h2>
+    <p class="sub">Four constraints shaped the architecture more than anything else.</p>
+
+    <h3>Live transcription with no WebSocket server</h3>
+    <p>
+      Serverless functions can't hold a socket open. Rather than run separate infrastructure, the
+      server mints a short-lived Deepgram token and the <em>browser</em> connects to Deepgram directly.
+      Audio is never proxied, our API key never reaches the client, and no long-lived process exists.
+    </p>
+
+    <h3>Long-running work with no queue service</h3>
+    <p>
+      Transcribing an hour of audio outlives a request. Instead of adding Redis or Inngest, jobs live in a
+      table keyed uniquely on <code>(meeting_id, step)</code>, drained in-process and backstopped by a cron
+      sweeper. Webhook retries, cron overlap and manual re-runs are all idempotent.
+    </p>
+
+    <h3>Map-reduce for summaries, retrieval for questions</h3>
+    <p>
+      These need opposite treatments. Summarization must read everything, so long transcripts are chunked,
+      summarized in sections, and merged. A question only needs the relevant parts, so AskFred ranks sentences
+      with Postgres full-text search, expands each hit into a window of surrounding context, and adds
+      evenly-spaced samples so vague questions still get whole-meeting coverage.
+    </p>
+
+    <h3>Analytics in code, not in the model</h3>
+    <p>
+      Talk time, words per minute, filler words and monologue length are arithmetic over word timings.
+      Computing them in TypeScript is cheaper, instant, and exactly right where a model would approximate.
+    </p>
+  </section>
+
+  <section>
+    <h2>Edge cases tested</h2>
+    <p class="sub">Each of these came from actually running the thing, not from imagining what might break. All are fixed.</p>
+
+    <div class="finding fixed">
+      <span class="tag">Stress test · 55-minute analyst call</span>
+      <p class="finding-h">1,032 sentences failed to summarize</p>
+      <p>
+        Not the context window — <code>gpt-oss-120b</code> holds 131k tokens. The wall was Groq's free tier:
+        8,000 tokens per minute, counting <code>max_tokens</code> against the same budget. Measuring the prompt
+        showed the per-sentence <code>[index] (mm:ss) Speaker:</code> prefix cost 6,443 tokens — 37% of it — and
+        951 of the 1,032 prefixes were redundant because the speaker hadn't changed. Fixed by grouping sentences
+        into speaker turns (81 prefixes instead of 1,032) and map-reducing what still didn't fit.
+      </p>
+    </div>
+
+    <div class="finding fixed">
+      <span class="tag">Bot lifecycle</span>
+      <p class="finding-h">A notetaker nobody let in</p>
+      <p>
+        Recall reports <code>done</code> with zero recordings when the bot times out in a waiting room. That read
+        as "media still uploading", so it polled forever. Now distinguished from the status trail, and the meeting
+        fails with something actionable: <em>"The notetaker was never admitted to the call."</em>
+      </p>
+    </div>
+
+    <div class="finding fixed">
+      <span class="tag">Job scheduling</span>
+      <p class="finding-h">Self-rescheduling jobs ran exactly once</p>
+      <p>
+        The bot job re-enqueues itself to poll, but the runner marked the row <code>completed</code> after the step
+        returned — overwriting the re-enqueue. Completion is now conditional on the row still being
+        <code>running</code>. Uploads never exposed this, because they enqueue a different step.
+      </p>
+    </div>
+
+    <div class="finding fixed">
+      <span class="tag">Empty input</span>
+      <p class="finding-h">Recording silence retried three times</p>
+      <p>
+        An empty transcript is deterministic — retrying can't fix it. Added a distinct permanent-failure path so
+        it fails once, with a human explanation instead of a vendor string.
+      </p>
+    </div>
+
+    <div class="finding fixed">
+      <span class="tag">Multi-tenant demo</span>
+      <p class="finding-h">Every visitor shared one workspace</p>
+      <p>
+        On a deployed link, one visitor's recordings would have been visible to the next, and anyone could delete
+        the samples for everyone. Each demo sign-in now provisions its own workspace cloned from a template.
+        Verified with two browser contexts: disjoint meeting ids, deletions don't cross over, and requesting
+        another workspace's meeting returns 404.
+      </p>
+    </div>
+
+    <div class="finding fixed">
+      <span class="tag">Data integrity</span>
+      <p class="finding-h">Timestamps were timezone-naive</p>
+      <p>
+        All columns were <code>timestamp without time zone</code> holding UTC. The app was self-consistent, but any
+        raw SQL using <code>now()</code> compared local time against UTC values — which is how a scheduling bug first
+        disguised itself. All 23 columns converted to <code>timestamptz</code>.
+      </p>
+    </div>
+
+    <div class="finding fixed">
+      <span class="tag">Vendor permissions</span>
+      <p class="finding-h">A key that couldn't mint streaming tokens</p>
+      <p>
+        Deepgram's grant endpoint needs Member scope; ours returned 403, so every recording opened with raw vendor
+        JSON in an alert. Capabilities are now probed once and cached, and the recorder simply doesn't attempt
+        streaming when it won't work — batch transcription covers it silently.
+      </p>
+    </div>
+
+    <div class="finding fixed">
+      <span class="tag">Browser behaviour</span>
+      <p class="finding-h">A button stuck on "Opening demo…"</p>
+      <p>
+        Back-navigation restores the page from bfcache with React state intact. Reset on <code>pageshow</code> and
+        <code>focus</code>, with a timeout as backstop.
+      </p>
+    </div>
+
+    <h3>Also verified</h3>
+    <ul>
+      <li>A real two-speaker MP3 through the full upload → Deepgram → notes pipeline.</li>
+      <li>AskFred declining to answer: asked for a listing date never mentioned in a 55-minute call, it said so rather than inventing one.</li>
+      <li>Vague questions with weak search matches still answered accurately, via evenly-spaced sampling plus the meeting's own notes.</li>
+      <li>Zero horizontal overflow at 390px; no console errors across all screens.</li>
+      <li>Cold start from a clean clone: install, push schema, seed, run.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Known limitations</h2>
+    <p class="sub">Things I'd fix next, and constraints a reviewer should know going in.</p>
+    <ul>
+      <li><strong>Live streaming is off</strong> on the current Deepgram key — it lacks the Member role needed to mint browser tokens. Recordings are transcribed in full when you stop; you just don't see words appear live. A correctly-scoped key enables it with no code change.</li>
+      <li><strong>Demo sandboxes are per-browser.</strong> Without Google OAuth configured there's no identity to tie a visitor across devices, so a different device gets a fresh workspace. Setting <code>AUTH_GOOGLE_ID</code> gives real persistent accounts.</li>
+      <li><strong>The free model is the weak link.</strong> <code>gpt-oss-120b</code> writes solid notes but is measurably less precise than Claude at citing the exact line — spot-checking AskFred, one citation landed on the right topic but the wrong sentence. Adding an Anthropic key switches provider with no code change.</li>
+      <li><strong>Long meetings take minutes, not seconds</strong> on a free tier, because each chunk waits out the per-minute ceiling. Progress is shown; a paid tier collapses it to one or two calls.</li>
+      <li><strong>Vercel Hobby crons run daily</strong>, so production bot-progress polling should be driven by the Recall webhook endpoint rather than the sweeper.</li>
+      <li><strong>Diarization yields "Speaker 1 / 2 / 3."</strong> Mapping them to real people is a manual rename that applies across the transcript — the same as real Fireflies until voice profiles are trained.</li>
+      <li><strong>No calendar integration.</strong> Upcoming meetings and auto-join would need Google Calendar scopes and a sync loop.</li>
+      <li><strong>Single workspace per user.</strong> No teams, roles, billing or seat management.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Running it</h2>
+    <p>Two variables are required; everything else unlocks a capability and degrades cleanly without it.</p>
+    <pre>git clone https://github.com/whatmanathinks/fireflies-x.git
+cd fireflies-x
+pnpm install
+cp .env.example .env.local     # DATABASE_URL + AUTH_SECRET
+pnpm db:push &amp;&amp; pnpm db:seed
+pnpm dev</pre>
+    <p>
+      Sign in with <strong>Continue as Demo User</strong> — no OAuth setup needed. The README documents every
+      variable, the deploy path, and which parts are real versus simulated.
+    </p>
+  </section>
+
+  <section>
+    <h2>Notes on the process</h2>
+    <p>
+      The brief suggested under ten hours. This took roughly twenty elapsed, across two days, because the goal
+      was a product rather than a demonstration — and most of the second half went on things only real usage
+      surfaces. The 55-minute analyst call was the single most valuable test: it broke the summarizer, and fixing
+      it properly meant measuring the prompt rather than guessing at the cause.
+    </p>
+    <p>
+      Built with Claude Code. Where the brief allowed a placeholder — the meeting bot — I initially simulated it,
+      then replaced it with Recall.ai once it was clear that buying the hard part was a few hours of work rather
+      than the multi-week project building it from scratch would have been.
+    </p>
+  </section>
+
+  <footer>
+    FireflyX · An independent clone built as an engineering exercise. Not affiliated with Fireflies.ai.
+  </footer>
+
+</div>

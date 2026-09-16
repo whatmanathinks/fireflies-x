@@ -15,6 +15,7 @@ records it                             (bring your own model)
 ```
 
 Repo: <https://github.com/whatmanathinks/fireflies-x>
+Build notes (tools, costs, edge cases, limitations): [`docs/submission.html`](docs/submission.html)
 
 ---
 
