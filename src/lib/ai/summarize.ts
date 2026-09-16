@@ -23,7 +23,7 @@ import {
 import { templateById } from "./templates";
 
 const MAP_OUTPUT_TOKENS = 1400;
-const CLASSIFY_OUTPUT_TOKENS = 1800;
+const CLASSIFY_OUTPUT_TOKENS = 2600;
 
 const SUMMARY_SYSTEM = `You write meeting notes for a meeting-intelligence product. Your notes are read by people who did not attend.
 
