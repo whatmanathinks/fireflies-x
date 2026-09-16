@@ -73,6 +73,22 @@ async function post(
       payload = body;
       continue;
     }
+    // One model failing to produce schema-valid JSON is that model's problem,
+    // not the request's: rotate rather than failing the whole job.
+    if (/json_validate_failed|failed to validate json/i.test(detail)) {
+      const current = models[modelIndex];
+      if (modelIndex < models.length - 1) {
+        modelIndex += 1;
+        console.warn(`[llm] ${current} returned invalid JSON; trying ${models[modelIndex]}`);
+        onNotice?.({ message: `${current} struggled — trying ${models[modelIndex]}` });
+        continue;
+      }
+      throw new Error(
+        `No configured model produced valid JSON for this request (last tried ${current}). ` +
+          `Raise LLM_MAX_TOKENS so the model has room to finish, or use a stronger model.`,
+      );
+    }
+
     if (res.status === 413 || /reduce your message size/i.test(detail)) {
       throw new Error(
         `This transcript is too large for ${env.llmModel} on your current tier. ` +
@@ -153,6 +169,7 @@ export async function openAiJson(
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
+    if (/No configured model produced valid JSON|too large for/i.test(message)) throw error;
     if (!/json_schema|response_format|strict|400/i.test(message)) throw error;
 
     messages[0].content = `${system}\n\nRespond with JSON only, matching this schema exactly:\n${JSON.stringify(jsonSchema.schema)}`;
