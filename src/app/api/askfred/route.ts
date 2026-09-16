@@ -1,16 +1,16 @@
-import { and, asc, eq, inArray } from "drizzle-orm";
+import { and, desc, eq, inArray } from "drizzle-orm";
 import { db } from "@/db";
-import { meetings, sentences, speakers } from "@/db/schema";
+import { meetings } from "@/db/schema";
 import { fail } from "@/lib/api";
 import { fallbackAnswer, streamWorkspaceAnswer, type ChatTurn } from "@/lib/ai/askfred";
+import { inputBudget } from "@/lib/ai/chunking";
+import { buildWorkspaceContext, meetingsMatching } from "@/lib/ai/retrieval";
 import { requireSession } from "@/lib/auth";
-import { hasAnthropic } from "@/lib/env";
-import { searchTranscripts } from "@/lib/queries";
+import { env, hasAnthropic } from "@/lib/env";
 
 export const maxDuration = 300;
 
 const MAX_MEETINGS = 4;
-const MAX_LINES_PER_MEETING = 260;
 
 export async function POST(request: Request) {
   let session;
@@ -28,56 +28,42 @@ export async function POST(request: Request) {
   const question = body?.question?.trim();
   if (!question) return fail("question is required");
 
-  const hits = await searchTranscripts(session.workspaceId, question, 80);
+  const answerBudget = Math.min(env.llmMaxTokens, 2000);
+  const totalBudget = inputBudget(answerBudget);
 
-  const ranked = new Map<string, number>();
-  for (const hit of hits) {
-    ranked.set(hit.meetingId, (ranked.get(hit.meetingId) ?? 0) + Number(hit.rank ?? 1));
-  }
-
-  let meetingIds = [...ranked.entries()]
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, MAX_MEETINGS)
-    .map(([id]) => id);
+  let meetingIds = await meetingsMatching(session.workspaceId, question, MAX_MEETINGS);
 
   if (meetingIds.length === 0) {
     const recent = await db
       .select({ id: meetings.id })
       .from(meetings)
       .where(and(eq(meetings.workspaceId, session.workspaceId), eq(meetings.status, "completed")))
+      .orderBy(desc(meetings.date))
       .limit(MAX_MEETINGS);
     meetingIds = recent.map((m) => m.id);
   }
 
   if (meetingIds.length === 0) return fail("No transcribed meetings to search yet");
 
-  const [meetingRows, sentenceRows, speakerRows] = await Promise.all([
-    db.select().from(meetings).where(inArray(meetings.id, meetingIds)),
-    db
-      .select()
-      .from(sentences)
-      .where(inArray(sentences.meetingId, meetingIds))
-      .orderBy(asc(sentences.index)),
-    db.select().from(speakers).where(inArray(speakers.meetingId, meetingIds)),
-  ]);
+  const meetingRows = await db
+    .select({ id: meetings.id, title: meetings.title })
+    .from(meetings)
+    .where(inArray(meetings.id, meetingIds));
 
-  const nameFor = new Map(
-    speakerRows.map((s) => [`${s.meetingId}:${s.speakerIndex}`, s.displayName ?? s.label]),
-  );
+  const titleFor = new Map(meetingRows.map((m) => [m.id, m.title]));
+  const perMeeting = Math.max(700, Math.floor(totalBudget / meetingIds.length));
+  const contexts = await buildWorkspaceContext(meetingIds, question, perMeeting);
 
-  const excerpts = meetingRows.map((meeting) => ({
-    meetingId: meeting.id,
-    meetingTitle: meeting.title,
-    lines: sentenceRows
-      .filter((s) => s.meetingId === meeting.id)
-      .slice(0, MAX_LINES_PER_MEETING)
-      .map((s) => ({
-        index: s.index,
-        speakerName: nameFor.get(`${meeting.id}:${s.speakerIndex}`) ?? s.speakerName,
-        startMs: s.startMs,
-        text: s.text,
-      })),
-  }));
+  const excerpts = contexts
+    .filter((c) => c.lines.length > 0)
+    .map((c) => ({
+      meetingId: c.meetingId,
+      meetingTitle: titleFor.get(c.meetingId) ?? "Untitled meeting",
+      lines: c.lines,
+      summaryDigest: c.summaryDigest,
+    }));
+
+  if (!excerpts.length) return fail("No transcribed meetings to search yet");
 
   const encoder = new TextEncoder();
   const headers = {

@@ -159,6 +159,13 @@ chapters, action items), and a final pass merges them — deduplicating commitme
 chronological order. The merge input is a few hundred tokens regardless of meeting length, so
 this scales to any duration; only wall-clock grows. Anthropic skips chunking entirely.
 
+**AskFred uses retrieval, not chunking.** Map-reduce suits summarization, where you must read
+everything; a question only needs the relevant parts. For a meeting that doesn't fit the budget,
+Postgres full-text search ranks sentences against the question, each hit is expanded into a
+window of surrounding lines, evenly-spaced samples are added so vague questions still get whole-
+meeting coverage, and the meeting's generated notes are prepended. Fred is told it is seeing
+excerpts, so it says what it would need rather than guessing.
+
 Note the constraint is **rate limit, not context window**: `gpt-oss-120b` has 131k context, but
 Groq's free tier allows 8,000 tokens per minute and counts `max_tokens` against it. Progress is
 surfaced in the UI ("Reading section 2 of 4") since a long run takes minutes.

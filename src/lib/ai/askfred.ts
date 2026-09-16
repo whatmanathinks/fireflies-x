@@ -1,4 +1,5 @@
-import { renderTranscript, type TranscriptLine } from "./client";
+import { groupIntoTurns, renderTurns } from "./chunking";
+import type { TranscriptLine } from "./client";
 import { streamText, type ChatMessage } from "./provider";
 
 const SYSTEM = `You are Fred, an assistant that answers questions about meetings the user has recorded.
@@ -6,7 +7,8 @@ const SYSTEM = `You are Fred, an assistant that answers questions about meetings
 You are given the full transcript. Every line is prefixed with its index and timestamp as [index] (mm:ss).
 
 How to answer:
-- Answer only from the transcript. If the transcript does not contain the answer, say so plainly - do not speculate or fill gaps with plausible-sounding detail.
+- Answer only from what you were given. If it does not contain the answer, say so plainly - do not speculate or fill gaps with plausible-sounding detail.
+- For a long meeting you may be given the meeting's notes plus the excerpts most relevant to the question, rather than the whole transcript. If the excerpts do not settle the question, say which part of the meeting you would need rather than guessing.
 - Cite the moment you are drawing on by writing the timestamp in the form [t=mm:ss] immediately after the claim. Use the timestamp of the line you are actually using.
 - Be concise and direct. Lead with the answer, then the supporting detail.
 - Quote the speaker verbatim when the exact wording matters (commitments, numbers, decisions).
@@ -30,30 +32,43 @@ export async function* streamMeetingAnswer(
   meetingTitle: string,
   history: ChatTurn[],
   question: string,
+  options?: { partial?: boolean; summaryDigest?: string | null },
 ) {
-  const transcript = renderTranscript(lines);
+  const transcript = renderTurns(groupIntoTurns(lines));
+  const header = options?.partial
+    ? `Meeting: ${meetingTitle}\n\nThis meeting is long, so you are given its notes followed by the transcript excerpts most relevant to the question.`
+    : `Meeting: ${meetingTitle}`;
 
-  yield* streamText(
-    SYSTEM,
-    [
-      { text: `Meeting: ${meetingTitle}\n\nTranscript:\n\n${transcript}`, cache: true },
-      { text: "I will ask questions about this meeting." },
-    ],
-    history,
-    question,
-  );
+  const parts: { text: string; cache?: boolean }[] = [{ text: header }];
+  if (options?.summaryDigest) {
+    parts.push({ text: `Meeting notes:\n\n${options.summaryDigest}` });
+  }
+  parts.push({
+    text: `Transcript${options?.partial ? " excerpts" : ""}. Each line is "#index mm:ss Speaker: text":\n\n${transcript}`,
+    cache: true,
+  });
+  parts.push({ text: "I will ask questions about this meeting." });
+
+  yield* streamText(SYSTEM, parts, history, question);
 }
 
 export async function* streamWorkspaceAnswer(
-  excerpts: { meetingTitle: string; meetingId: string; lines: TranscriptLine[] }[],
+  excerpts: {
+    meetingTitle: string;
+    meetingId: string;
+    lines: TranscriptLine[];
+    summaryDigest?: string | null;
+  }[],
   history: ChatTurn[],
   question: string,
 ) {
   const body = excerpts
-    .map(
-      (e) =>
-        `### Meeting: ${e.meetingTitle} (id ${e.meetingId})\n${renderTranscript(e.lines)}`,
-    )
+    .map((e) => {
+      const blocks = [`### Meeting: ${e.meetingTitle} (id ${e.meetingId})`];
+      if (e.summaryDigest) blocks.push(`Notes:\n${e.summaryDigest}`);
+      blocks.push(renderTurns(groupIntoTurns(e.lines)));
+      return blocks.join("\n");
+    })
     .join("\n\n");
 
   yield* streamText(

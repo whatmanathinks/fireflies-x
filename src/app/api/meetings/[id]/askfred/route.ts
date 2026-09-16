@@ -1,10 +1,12 @@
-import { and, asc, eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
-import { meetings, sentences, speakers } from "@/db/schema";
+import { meetings } from "@/db/schema";
 import { fail } from "@/lib/api";
 import { fallbackAnswer, streamMeetingAnswer, type ChatTurn } from "@/lib/ai/askfred";
+import { inputBudget } from "@/lib/ai/chunking";
+import { buildMeetingContext } from "@/lib/ai/retrieval";
 import { requireSession } from "@/lib/auth";
-import { hasAnthropic } from "@/lib/env";
+import { env, hasAnthropic } from "@/lib/env";
 
 export const maxDuration = 300;
 
@@ -34,30 +36,11 @@ export async function POST(
   });
   if (!meeting) return fail("Meeting not found", 404);
 
-  const [rows, speakerRows] = await Promise.all([
-    db
-      .select({
-        index: sentences.index,
-        speakerIndex: sentences.speakerIndex,
-        speakerName: sentences.speakerName,
-        startMs: sentences.startMs,
-        text: sentences.text,
-      })
-      .from(sentences)
-      .where(eq(sentences.meetingId, id))
-      .orderBy(asc(sentences.index)),
-    db.select().from(speakers).where(eq(speakers.meetingId, id)),
-  ]);
+  const answerBudget = Math.min(env.llmMaxTokens, 2000);
+  const context = await buildMeetingContext(id, question, inputBudget(answerBudget));
+  const lines = context.lines;
 
-  if (!rows.length) return fail("This meeting has no transcript yet");
-
-  const nameFor = new Map(speakerRows.map((s) => [s.speakerIndex, s.displayName ?? s.label]));
-  const lines = rows.map((r) => ({
-    index: r.index,
-    speakerName: nameFor.get(r.speakerIndex) ?? r.speakerName,
-    startMs: r.startMs,
-    text: r.text,
-  }));
+  if (!lines.length) return fail("This meeting has no transcript yet");
 
   const encoder = new TextEncoder();
 
@@ -91,6 +74,7 @@ export async function POST(
           meeting.title,
           body?.history ?? [],
           question,
+          { partial: context.covered === "retrieved", summaryDigest: context.summaryDigest },
         )) {
           controller.enqueue(encoder.encode(chunk));
         }
