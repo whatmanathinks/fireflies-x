@@ -89,14 +89,23 @@ export function chunkTurns(turns: Turn[], budgetTokens: number): Turn[][] {
   return chunks;
 }
 
-export function chunkLines(lines: TranscriptLine[], budgetTokens: number): TranscriptLine[][] {
+/**
+ * Classification output grows with the number of sentences, not their length: every
+ * sentence can appear in up to seven index arrays. Sizing purely by input tokens
+ * produced chunks no model could answer within its output ceiling, so cap the count too.
+ */
+export function chunkLines(
+  lines: TranscriptLine[],
+  budgetTokens: number,
+  maxLines = 100,
+): TranscriptLine[][] {
   const chunks: TranscriptLine[][] = [];
   let current: TranscriptLine[] = [];
   let used = 0;
 
   for (const line of lines) {
     const cost = estimateTokens(line.text) + 6;
-    if (current.length && used + cost > budgetTokens) {
+    if (current.length && (used + cost > budgetTokens || current.length >= maxLines)) {
       chunks.push(current);
       current = [];
       used = 0;

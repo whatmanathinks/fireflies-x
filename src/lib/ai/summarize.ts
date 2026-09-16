@@ -23,7 +23,8 @@ import {
 import { templateById } from "./templates";
 
 const MAP_OUTPUT_TOKENS = 1400;
-const CLASSIFY_OUTPUT_TOKENS = 2600;
+const CLASSIFY_OUTPUT_TOKENS = 1500;
+const CLASSIFY_MAX_LINES = 100;
 
 const SUMMARY_SYSTEM = `You write meeting notes for a meeting-intelligence product. Your notes are read by people who did not attend.
 
@@ -80,7 +81,7 @@ export function planSummary(lines: TranscriptLine[]) {
 }
 
 export function planClassify(lines: TranscriptLine[]) {
-  return chunkLines(lines, inputBudget(CLASSIFY_OUTPUT_TOKENS));
+  return chunkLines(lines, inputBudget(CLASSIFY_OUTPUT_TOKENS), CLASSIFY_MAX_LINES);
 }
 
 export async function summarizeWhole(
