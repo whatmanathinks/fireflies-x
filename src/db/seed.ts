@@ -28,11 +28,11 @@ import {
 import type { ClassifyResult, SummaryResult } from "@/lib/ai/schemas";
 import { computeAnalytics } from "@/lib/analytics";
 import { DEMO_NAME, DEMO_WORKSPACE, TEMPLATE_EMAIL } from "@/lib/constants";
-import { hasAnthropic } from "@/lib/env";
+import { hasLlm } from "@/lib/env";
 import { buildSentences, fixtureDuration } from "@/lib/fixtures/build";
 import { fixtures, type Fixture } from "@/lib/fixtures/transcripts";
 
-const USE_AI = process.env.SEED_WITH_AI === "1" && hasAnthropic();
+const USE_AI = process.env.SEED_WITH_AI === "1" && hasLlm();
 
 async function seedMeeting(
   fixture: Fixture,

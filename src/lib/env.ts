@@ -33,8 +33,12 @@ export const env = {
 };
 
 export const hasDeepgram = () => !!env.deepgramApiKey && !env.forceDemo;
-export const hasAnthropic = () =>
-  !env.forceDemo && (!!env.anthropicApiKey || (!!env.llmApiKey && !!env.llmBaseUrl));
+/** True when any language model is reachable: Anthropic, a pool, or a single endpoint. */
+export const hasLlm = () =>
+  !env.forceDemo &&
+  (!!env.anthropicApiKey ||
+    !!env.llmPoolRaw.trim() ||
+    (!!env.llmApiKey && !!env.llmBaseUrl));
 export const hasBlob = () => !!env.blobToken || !!env.blobStoreId;
 export const hasGoogle = () => !!env.googleClientId && !!env.googleClientSecret;
 export const hasRecall = () => !!env.recallApiKey && !env.forceDemo;
@@ -45,13 +49,13 @@ export const isLocalHost = () =>
 
 export const canReceiveWebhooks = () => !isLocalHost();
 
-export const demoMode = () => !hasDeepgram() || !hasAnthropic();
+export const demoMode = () => !hasDeepgram() || !hasLlm();
 
 export const missingKeys = () => {
   const missing: string[] = [];
   if (!env.databaseUrl) missing.push("DATABASE_URL");
   if (!env.deepgramApiKey) missing.push("DEEPGRAM_API_KEY");
-  if (!hasAnthropic()) missing.push("ANTHROPIC_API_KEY (or LLM_API_KEY + LLM_BASE_URL)");
+  if (!hasLlm()) missing.push("ANTHROPIC_API_KEY (or LLM_API_KEY + LLM_BASE_URL)");
   if (!hasGoogle()) missing.push("AUTH_GOOGLE_ID / AUTH_GOOGLE_SECRET");
   if (!hasBlob()) missing.push("BLOB_READ_WRITE_TOKEN (or BLOB_STORE_ID via OIDC)");
   return missing;

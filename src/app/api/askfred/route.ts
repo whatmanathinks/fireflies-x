@@ -6,7 +6,7 @@ import { fallbackAnswer, streamWorkspaceAnswer, type ChatTurn } from "@/lib/ai/a
 import { inputBudget } from "@/lib/ai/chunking";
 import { buildWorkspaceContext, meetingsMatching } from "@/lib/ai/retrieval";
 import { requireSession } from "@/lib/auth";
-import { env, hasAnthropic } from "@/lib/env";
+import { env, hasLlm } from "@/lib/env";
 
 export const maxDuration = 300;
 
@@ -72,7 +72,7 @@ export async function POST(request: Request) {
     "X-Accel-Buffering": "no",
   };
 
-  if (!hasAnthropic()) {
+  if (!hasLlm()) {
     const text = fallbackAnswer(excerpts.flatMap((e) => e.lines), question);
     return new Response(
       new ReadableStream({

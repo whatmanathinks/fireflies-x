@@ -23,7 +23,7 @@ import {
 } from "@/lib/ai/summarize";
 import type { ChunkNotes, ClassifyResult, SummaryResult } from "@/lib/ai/schemas";
 import { computeAnalytics } from "@/lib/analytics";
-import { env, hasAnthropic } from "@/lib/env";
+import { env, hasLlm } from "@/lib/env";
 import { failureCodeOf, isPermanent, PermanentError } from "@/lib/errors";
 
 export type JobStep = "summarize" | "transcribe" | "bot";
@@ -257,7 +257,7 @@ export async function summarizeMeeting(
     text: s.text,
   }));
 
-  const useAi = hasAnthropic();
+  const useAi = hasLlm();
   const outOfTime = () => Date.now() - startedAt > STEP_BUDGET_MS;
 
   let stage = "Writing your notes";

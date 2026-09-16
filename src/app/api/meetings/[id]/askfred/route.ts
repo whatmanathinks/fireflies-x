@@ -6,7 +6,7 @@ import { fallbackAnswer, streamMeetingAnswer, type ChatTurn } from "@/lib/ai/ask
 import { inputBudget } from "@/lib/ai/chunking";
 import { buildMeetingContext } from "@/lib/ai/retrieval";
 import { requireSession } from "@/lib/auth";
-import { env, hasAnthropic } from "@/lib/env";
+import { env, hasLlm } from "@/lib/env";
 
 export const maxDuration = 300;
 
@@ -44,7 +44,7 @@ export async function POST(
 
   const encoder = new TextEncoder();
 
-  if (!hasAnthropic()) {
+  if (!hasLlm()) {
     const text = fallbackAnswer(lines, question);
     return new Response(
       new ReadableStream({
